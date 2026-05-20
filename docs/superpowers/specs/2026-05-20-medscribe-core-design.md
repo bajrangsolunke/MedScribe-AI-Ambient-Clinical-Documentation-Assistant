@@ -1,7 +1,7 @@
 # MedScribe AI — Sub-project #1: Core Scribe
 
 **Date**: 2026-05-20
-**Owner**: Jyoti Varade
+**Owner**: Bajrang Solunke
 **Status**: Approved design, ready for implementation planning
 
 ## Context
