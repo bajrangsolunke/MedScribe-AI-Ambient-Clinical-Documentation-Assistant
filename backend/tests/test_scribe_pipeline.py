@@ -33,7 +33,9 @@ def _drain(bus: EventBus, session_id: int) -> list[dict[str, Any]]:
     q = bus.queue_for(session_id)
     out: list[dict[str, Any]] = []
     while not q.empty():
-        out.append(q.get_nowait())
+        ev = q.get_nowait()
+        if "stage" in ev:  # skip the SENTINEL_CLOSE marker
+            out.append(ev)
     return out
 
 

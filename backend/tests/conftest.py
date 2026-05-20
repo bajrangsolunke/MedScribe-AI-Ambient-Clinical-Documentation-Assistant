@@ -35,7 +35,9 @@ def db_session(db_engine: Any) -> Generator[Any, None, None]:
 
 
 @pytest.fixture
-def client(db_engine: Any) -> Generator[TestClient, None, None]:
+def client(
+    db_engine: Any, monkeypatch: pytest.MonkeyPatch
+) -> Generator[TestClient, None, None]:
     TestingSession = sessionmaker(bind=db_engine, autoflush=False, autocommit=False)
 
     def override_get_db() -> Generator[Any, None, None]:
@@ -44,6 +46,10 @@ def client(db_engine: Any) -> Generator[TestClient, None, None]:
             yield db
         finally:
             db.close()
+
+    # BackgroundTasks open their own DB session via SessionLocal — point it at
+    # the same in-memory engine so pipeline writes are visible in the test.
+    monkeypatch.setattr("app.api.sessions.SessionLocal", TestingSession)
 
     app.dependency_overrides[get_db] = override_get_db
     try:
