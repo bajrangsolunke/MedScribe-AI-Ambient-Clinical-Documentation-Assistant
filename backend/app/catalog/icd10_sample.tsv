@@ -1,0 +1,52 @@
+code	short_description	long_description	chapter
+R07.9	Chest pain, unspecified	Chest pain, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+R07.89	Other chest pain	Other chest pain	Symptoms, signs and abnormal clinical and laboratory findings
+R07.1	Chest pain on breathing	Chest pain on breathing	Symptoms, signs and abnormal clinical and laboratory findings
+R51.9	Headache, unspecified	Headache, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+G43.909	Migraine, unspecified, not intractable, without status migrainosus	Migraine, unspecified, not intractable, without status migrainosus	Diseases of the nervous system
+G43.109	Migraine with aura, not intractable, without status migrainosus	Migraine with aura, not intractable, without status migrainosus	Diseases of the nervous system
+I10	Essential (primary) hypertension	Essential (primary) hypertension	Diseases of the circulatory system
+I25.10	Atherosclerotic heart disease of native coronary artery without angina pectoris	Atherosclerotic heart disease of native coronary artery without angina pectoris	Diseases of the circulatory system
+E11.9	Type 2 diabetes mellitus without complications	Type 2 diabetes mellitus without complications	Endocrine, nutritional and metabolic diseases
+E11.65	Type 2 diabetes mellitus with hyperglycemia	Type 2 diabetes mellitus with hyperglycemia	Endocrine, nutritional and metabolic diseases
+E11.40	Type 2 diabetes mellitus with diabetic neuropathy, unspecified	Type 2 diabetes mellitus with diabetic neuropathy, unspecified	Endocrine, nutritional and metabolic diseases
+E78.5	Hyperlipidemia, unspecified	Hyperlipidemia, unspecified	Endocrine, nutritional and metabolic diseases
+J06.9	Acute upper respiratory infection, unspecified	Acute upper respiratory infection, unspecified	Diseases of the respiratory system
+J00	Acute nasopharyngitis [common cold]	Acute nasopharyngitis [common cold]	Diseases of the respiratory system
+J45.909	Unspecified asthma, uncomplicated	Unspecified asthma, uncomplicated	Diseases of the respiratory system
+J20.9	Acute bronchitis, unspecified	Acute bronchitis, unspecified	Diseases of the respiratory system
+J18.9	Pneumonia, unspecified organism	Pneumonia, unspecified organism	Diseases of the respiratory system
+K21.9	Gastro-esophageal reflux disease without esophagitis	Gastro-esophageal reflux disease without esophagitis	Diseases of the digestive system
+K29.70	Gastritis, unspecified, without bleeding	Gastritis, unspecified, without bleeding	Diseases of the digestive system
+K59.00	Constipation, unspecified	Constipation, unspecified	Diseases of the digestive system
+R10.9	Unspecified abdominal pain	Unspecified abdominal pain	Symptoms, signs and abnormal clinical and laboratory findings
+R10.13	Epigastric pain	Epigastric pain	Symptoms, signs and abnormal clinical and laboratory findings
+M54.5	Low back pain	Low back pain	Diseases of the musculoskeletal system and connective tissue
+M54.50	Low back pain, unspecified	Low back pain, unspecified	Diseases of the musculoskeletal system and connective tissue
+M25.50	Pain in unspecified joint	Pain in unspecified joint	Diseases of the musculoskeletal system and connective tissue
+M79.1	Myalgia	Myalgia	Diseases of the musculoskeletal system and connective tissue
+F41.9	Anxiety disorder, unspecified	Anxiety disorder, unspecified	Mental, Behavioral and Neurodevelopmental disorders
+F41.1	Generalized anxiety disorder	Generalized anxiety disorder	Mental, Behavioral and Neurodevelopmental disorders
+F32.9	Major depressive disorder, single episode, unspecified	Major depressive disorder, single episode, unspecified	Mental, Behavioral and Neurodevelopmental disorders
+F33.9	Major depressive disorder, recurrent, unspecified	Major depressive disorder, recurrent, unspecified	Mental, Behavioral and Neurodevelopmental disorders
+G47.00	Insomnia, unspecified	Insomnia, unspecified	Diseases of the nervous system
+R53.83	Other fatigue	Other fatigue	Symptoms, signs and abnormal clinical and laboratory findings
+R50.9	Fever, unspecified	Fever, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+R11.10	Vomiting, unspecified	Vomiting, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+R11.2	Nausea with vomiting, unspecified	Nausea with vomiting, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+A09	Infectious gastroenteritis and colitis, unspecified	Infectious gastroenteritis and colitis, unspecified	Certain infectious and parasitic diseases
+N39.0	Urinary tract infection, site not specified	Urinary tract infection, site not specified	Diseases of the genitourinary system
+H66.90	Otitis media, unspecified, unspecified ear	Otitis media, unspecified, unspecified ear	Diseases of the ear and mastoid process
+J02.9	Acute pharyngitis, unspecified	Acute pharyngitis, unspecified	Diseases of the respiratory system
+J03.90	Acute tonsillitis, unspecified	Acute tonsillitis, unspecified	Diseases of the respiratory system
+L30.9	Dermatitis, unspecified	Dermatitis, unspecified	Diseases of the skin and subcutaneous tissue
+L20.9	Atopic dermatitis, unspecified	Atopic dermatitis, unspecified	Diseases of the skin and subcutaneous tissue
+Z00.00	Encounter for general adult medical examination without abnormal findings	Encounter for general adult medical examination without abnormal findings	Factors influencing health status and contact with health services
+Z23	Encounter for immunization	Encounter for immunization	Factors influencing health status and contact with health services
+R06.02	Shortness of breath	Shortness of breath	Symptoms, signs and abnormal clinical and laboratory findings
+R06.00	Dyspnea, unspecified	Dyspnea, unspecified	Symptoms, signs and abnormal clinical and laboratory findings
+R42	Dizziness and giddiness	Dizziness and giddiness	Symptoms, signs and abnormal clinical and laboratory findings
+R55	Syncope and collapse	Syncope and collapse	Symptoms, signs and abnormal clinical and laboratory findings
+I48.91	Unspecified atrial fibrillation	Unspecified atrial fibrillation	Diseases of the circulatory system
+I50.9	Heart failure, unspecified	Heart failure, unspecified	Diseases of the circulatory system
+N18.9	Chronic kidney disease, unspecified	Chronic kidney disease, unspecified	Diseases of the genitourinary system
