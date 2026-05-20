@@ -81,14 +81,15 @@ def mock_groq(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         return canned["transcript"]
 
     def fake_complete_json(prompt: str, schema: type, **kwargs: Any) -> Any:
-        # crude routing based on prompt content
-        if "SOAP" in prompt:
+        # Route by schema name — each pipeline stage uses a distinct schema
+        name = schema.__name__
+        if name == "SoapPayload":
             return schema.model_validate(canned["soap"])
-        if "ICD" in prompt:
+        if name == "IcdCandidates":
             return schema.model_validate(canned["icd_candidates"])
-        if "summary" in prompt.lower():
+        if name == "SummaryPayload":
             return schema.model_validate(canned["summary"])
-        raise AssertionError(f"unexpected prompt routed to mock: {prompt[:80]}")
+        raise AssertionError(f"unexpected schema routed to mock: {name}")
 
     monkeypatch.setattr("app.ai.stt.transcribe", fake_transcribe, raising=False)
     monkeypatch.setattr("app.ai.llm.complete_json", fake_complete_json, raising=False)
