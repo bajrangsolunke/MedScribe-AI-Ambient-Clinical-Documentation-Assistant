@@ -5,6 +5,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
+import { SessionDetailPage } from "@/pages/SessionDetailPage";
+import { WorkspacePage } from "@/pages/WorkspacePage";
 
 export function AppRoutes() {
   return (
@@ -17,6 +19,26 @@ export function AppRoutes() {
           <ProtectedRoute>
             <AppShell>
               <DashboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions/new"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <WorkspacePage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sessions/:id"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <SessionDetailPage />
             </AppShell>
           </ProtectedRoute>
         }

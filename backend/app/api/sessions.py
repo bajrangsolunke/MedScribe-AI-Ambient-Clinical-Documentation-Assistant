@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session as DbSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, get_db
-from app.deps import get_current_user
+from app.deps import get_current_user, get_current_user_eventsource
 from app.models import ConsultSession, IcdSuggestion, SessionStatus, SoapNote, User
 from app.schemas.session import (
     IcdAcceptedUpdate,
@@ -139,7 +139,7 @@ async def retry_session(
 async def stream_session(
     session_id: int,
     db: DbSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user_eventsource),
 ) -> EventSourceResponse:
     _get_owned_session(session_id, user, db)
     q = event_bus.queue_for(session_id)
