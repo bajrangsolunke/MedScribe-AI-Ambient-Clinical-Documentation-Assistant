@@ -9,6 +9,7 @@ import { PipelineStrip } from "@/components/PipelineStrip";
 import { SoapPanel } from "@/components/SoapPanel";
 import { SummaryCard } from "@/components/SummaryCard";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
+import { Waveform } from "@/components/Waveform";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -133,6 +134,12 @@ export function WorkspacePage() {
         <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
           <AlertCircle className="h-4 w-4" />
           {recorder.error}
+        </div>
+      )}
+
+      {recorder.isRecording && (
+        <div className="rounded-lg border border-slate-200 bg-slate-900 px-4 py-3">
+          <Waveform stream={recorder.stream} className="h-12 w-full" />
         </div>
       )}
 

@@ -20,6 +20,12 @@ class SessionOut(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     error_message: str | None
+    # Derived fields surfaced on the list endpoint so the dashboard can
+    # show info-dense cards without N+1 detail fetches.
+    icd_count: int = 0
+    has_soap: bool = False
+    transcript_chars: int = 0
+    duration_sec: int | None = None
 
 
 class SoapPayloadOut(BaseModel):

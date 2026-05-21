@@ -102,3 +102,30 @@ export function avatarColor(label: string): string {
 export function statusCanRetry(status: SessionStatus): boolean {
   return status === "failed";
 }
+
+export function formatDuration(sec: number | null): string | null {
+  if (sec == null || sec < 0) return null;
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return s === 0 ? `${m}m` : `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+export function formatTranscriptLen(chars: number): string {
+  if (chars === 0) return "no transcript";
+  // Rough proxy: ~5 chars per word for English
+  const words = Math.round(chars / 5);
+  if (words < 1000) return `${words} words`;
+  return `${(words / 1000).toFixed(1)}k words`;
+}
+
+export function confidenceTone(c: number): {
+  label: string;
+  className: string;
+} {
+  if (c >= 0.8) return { label: "high", className: "bg-emerald-100 text-emerald-700" };
+  if (c >= 0.6) return { label: "medium", className: "bg-amber-100 text-amber-700" };
+  return { label: "low", className: "bg-rose-100 text-rose-700" };
+}

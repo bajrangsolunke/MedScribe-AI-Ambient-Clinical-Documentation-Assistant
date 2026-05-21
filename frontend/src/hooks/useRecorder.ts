@@ -6,12 +6,14 @@ interface RecorderState {
   isRecording: boolean;
   duration: number; // seconds since recording started
   error: string | null;
+  stream: MediaStream | null;
 }
 
 const initialState: RecorderState = {
   isRecording: false,
   duration: 0,
   error: null,
+  stream: null,
 };
 
 /**
@@ -22,6 +24,9 @@ const initialState: RecorderState = {
  * is started on the same MediaStream. The caller's `onChunk` callback
  * receives each blob. Calling `stop()` flushes the final chunk with
  * `isFinal=true`.
+ *
+ * `stream` is exposed so a waveform/visualizer can subscribe to the live
+ * audio independently.
  *
  * There is a ~50–100 ms audio gap at each stop-restart boundary; the
  * transcript reads fine because Whisper is robust to mid-sentence cuts.
@@ -80,7 +85,7 @@ export function useRecorder({ chunkMs = 4000 }: { chunkMs?: number } = {}) {
       if (isFinal) {
         clearTimers();
         stopStream();
-        setState((s) => ({ ...s, isRecording: false }));
+        setState({ ...initialState });
       } else {
         // not final — kick off the next recorder cycle on the same stream
         // (call through the ref to avoid the recursive-binding ESLint trap)
@@ -98,7 +103,7 @@ export function useRecorder({ chunkMs = 4000 }: { chunkMs?: number } = {}) {
     async (onChunk: ChunkCallback) => {
       onChunkRef.current = onChunk;
       isFinalRef.current = false;
-      setState({ isRecording: true, duration: 0, error: null });
+      setState({ isRecording: true, duration: 0, error: null, stream: null });
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
@@ -106,6 +111,7 @@ export function useRecorder({ chunkMs = 4000 }: { chunkMs?: number } = {}) {
           ? "audio/webm;codecs=opus"
           : "audio/webm";
 
+        setState((s) => ({ ...s, stream }));
         beginRecorder();
 
         startTsRef.current = Date.now();
@@ -128,6 +134,7 @@ export function useRecorder({ chunkMs = 4000 }: { chunkMs?: number } = {}) {
         setState({
           isRecording: false,
           duration: 0,
+          stream: null,
           error: err instanceof Error ? err.message : "Microphone access denied",
         });
       }
@@ -149,7 +156,7 @@ export function useRecorder({ chunkMs = 4000 }: { chunkMs?: number } = {}) {
       // Nothing actively recording (between cycles) — clean up directly.
       clearTimers();
       stopStream();
-      setState((s) => ({ ...s, isRecording: false }));
+      setState({ ...initialState });
     }
   }, [clearTimers, stopStream]);
 

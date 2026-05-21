@@ -3,6 +3,9 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  Clock,
+  FileText,
+  Hash,
   Loader2,
   MoreVertical,
   Plus,
@@ -23,6 +26,8 @@ import { cn } from "@/lib/utils";
 import {
   avatarColor,
   computeStats,
+  formatDuration,
+  formatTranscriptLen,
   groupByTime,
   patientInitials,
   relativeTime,
@@ -281,6 +286,7 @@ interface SessionRowProps {
 }
 
 function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionRowProps) {
+  const meta = buildSessionMeta(session);
   return (
     <li
       onClick={onOpen}
@@ -299,7 +305,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
     >
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
           avatarColor(session.patient_label),
         )}
         aria-hidden
@@ -319,6 +325,16 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
         <div className="truncate text-xs text-slate-500">
           {session.chief_complaint || "No chief complaint"}
         </div>
+        {meta.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+            {meta.map((m) => (
+              <span key={m.label} className="inline-flex items-center gap-1">
+                {m.icon}
+                {m.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="hidden md:block">{statusBadge(session.status)}</div>
       <div
@@ -349,6 +365,41 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
       </div>
     </li>
   );
+}
+
+interface SessionMetaChip {
+  label: string;
+  icon: React.ReactNode;
+}
+
+function buildSessionMeta(session: SessionSummary): SessionMetaChip[] {
+  const chips: SessionMetaChip[] = [];
+  const duration = formatDuration(session.duration_sec);
+  if (duration) {
+    chips.push({
+      label: duration,
+      icon: <Clock className="h-3 w-3" />,
+    });
+  }
+  if (session.transcript_chars > 0) {
+    chips.push({
+      label: formatTranscriptLen(session.transcript_chars),
+      icon: <FileText className="h-3 w-3" />,
+    });
+  }
+  if (session.has_soap) {
+    chips.push({
+      label: "SOAP",
+      icon: <CheckCircle2 className="h-3 w-3 text-emerald-500" />,
+    });
+  }
+  if (session.icd_count > 0) {
+    chips.push({
+      label: `${session.icd_count} ICD${session.icd_count === 1 ? "" : "s"}`,
+      icon: <Hash className="h-3 w-3" />,
+    });
+  }
+  return chips;
 }
 
 function LoadingSkeleton() {

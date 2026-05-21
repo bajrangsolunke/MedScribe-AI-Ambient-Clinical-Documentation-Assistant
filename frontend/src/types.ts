@@ -22,6 +22,10 @@ export interface SessionSummary {
   started_at: string;
   completed_at: string | null;
   error_message: string | null;
+  icd_count: number;
+  has_soap: boolean;
+  transcript_chars: number;
+  duration_sec: number | null;
 }
 
 export interface SoapPayload {

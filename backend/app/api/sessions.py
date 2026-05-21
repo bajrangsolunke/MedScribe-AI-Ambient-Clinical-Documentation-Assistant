@@ -4,6 +4,7 @@ import asyncio
 import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -16,7 +17,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy.orm import Session as DbSession
+from sqlalchemy.orm import Session as DbSession, selectinload
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, get_db
@@ -44,12 +45,45 @@ def _get_owned_session(session_id: int, user: User, db: DbSession) -> ConsultSes
     return s
 
 
+def _serialize_session(s: ConsultSession) -> dict[str, Any]:
+    """Build a SessionOut/SessionDetail-compatible dict from an ORM row.
+
+    Derives icd_count / has_soap / transcript_chars / duration_sec so the
+    dashboard can render info-dense cards without separate detail fetches.
+    """
+    duration_sec: int | None = None
+    if s.completed_at and s.started_at:
+        duration_sec = max(int((s.completed_at - s.started_at).total_seconds()), 0)
+    return {
+        "id": s.id,
+        "patient_label": s.patient_label,
+        "chief_complaint": s.chief_complaint,
+        "status": s.status,
+        "started_at": s.started_at,
+        "completed_at": s.completed_at,
+        "error_message": s.error_message,
+        "icd_count": len(s.icd_suggestions),
+        "has_soap": s.soap_note is not None,
+        "transcript_chars": len(s.transcript_text or ""),
+        "duration_sec": duration_sec,
+    }
+
+
+def _serialize_session_detail(s: ConsultSession) -> dict[str, Any]:
+    out = _serialize_session(s)
+    out["transcript_text"] = s.transcript_text
+    out["visit_summary"] = s.visit_summary
+    out["soap_note"] = s.soap_note
+    out["icd_suggestions"] = s.icd_suggestions
+    return out
+
+
 @router.post("", response_model=SessionOut, status_code=status.HTTP_201_CREATED)
 def create_session(
     payload: SessionCreate,
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> ConsultSession:
+) -> dict[str, Any]:
     s = ConsultSession(
         user_id=user.id,
         patient_label=payload.patient_label,
@@ -58,20 +92,25 @@ def create_session(
     db.add(s)
     db.commit()
     db.refresh(s)
-    return s
+    return _serialize_session(s)
 
 
 @router.get("", response_model=list[SessionOut])
 def list_sessions(
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> list[ConsultSession]:
-    return (
+) -> list[dict[str, Any]]:
+    sessions = (
         db.query(ConsultSession)
+        .options(
+            selectinload(ConsultSession.soap_note),
+            selectinload(ConsultSession.icd_suggestions),
+        )
         .filter(ConsultSession.user_id == user.id)
         .order_by(ConsultSession.started_at.desc())
         .all()
     )
+    return [_serialize_session(s) for s in sessions]
 
 
 @router.get("/{session_id}", response_model=SessionDetail)
@@ -79,8 +118,8 @@ def get_session(
     session_id: int,
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> ConsultSession:
-    return _get_owned_session(session_id, user, db)
+) -> dict[str, Any]:
+    return _serialize_session_detail(_get_owned_session(session_id, user, db))
 
 
 @router.post(
@@ -237,7 +276,7 @@ def update_soap(
     payload: SoapUpdate,
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> ConsultSession:
+) -> dict[str, Any]:
     s = _get_owned_session(session_id, user, db)
     if s.soap_note is None:
         s.soap_note = SoapNote(session_id=s.id, **payload.model_dump())
@@ -250,7 +289,7 @@ def update_soap(
         s.soap_note.edited_at = datetime.now(UTC)
     db.commit()
     db.refresh(s)
-    return s
+    return _serialize_session_detail(s)
 
 
 @router.patch("/{session_id}/icd/{icd_id}", response_model=SessionDetail)
@@ -260,7 +299,7 @@ def set_icd_accepted(
     payload: IcdAcceptedUpdate,
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> ConsultSession:
+) -> dict[str, Any]:
     s = _get_owned_session(session_id, user, db)
     icd = db.get(IcdSuggestion, icd_id)
     if icd is None or icd.session_id != s.id:
@@ -268,4 +307,4 @@ def set_icd_accepted(
     icd.accepted_by_user = payload.accepted
     db.commit()
     db.refresh(s)
-    return s
+    return _serialize_session_detail(s)
