@@ -3,7 +3,8 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
 
 export function useAuth() {
-  const { token, user, isHydrated, hydrate, login, register, logout } = useAuthStore();
+  const { token, user, isHydrated, hydrate, login, register, loginWithGoogle, logout } =
+    useAuthStore();
 
   useEffect(() => {
     if (!isHydrated) {
@@ -18,6 +19,7 @@ export function useAuth() {
     isHydrated,
     login,
     register,
+    loginWithGoogle,
     logout,
   };
 }

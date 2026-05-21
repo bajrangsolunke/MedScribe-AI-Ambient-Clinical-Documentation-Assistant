@@ -69,6 +69,11 @@ export const api = {
         body: JSON.stringify({ email, password }),
       }),
     me: () => request<User>("/auth/me"),
+    google: (idToken: string) =>
+      request<TokenResponse>("/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ id_token: idToken }),
+      }),
   },
   sessions: {
     create: (patient_label: string, chief_complaint?: string) =>

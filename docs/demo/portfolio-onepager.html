@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MedScribe AI — Project Case Study</title>
+    <style>
+      :root {
+        --ink: #0f172a;
+        --muted: #475569;
+        --line: #e2e8f0;
+        --accent: #0284c7;
+        --accent-soft: #e0f2fe;
+        --good: #047857;
+        --good-soft: #d1fae5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        line-height: 1.5;
+        font-size: 13px;
+      }
+      .page {
+        max-width: 880px;
+        margin: 24px auto;
+        background: white;
+        padding: 36px 44px;
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .tile {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        background: var(--ink);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7dd3fc;
+      }
+      h1 {
+        font-size: 26px;
+        margin: 4px 0 0;
+        letter-spacing: -0.01em;
+      }
+      .tagline {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 2px 0 0;
+      }
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .meta a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .pill {
+        display: inline-block;
+        background: var(--good-soft);
+        color: var(--good);
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      hr {
+        border: 0;
+        border-top: 1px solid var(--line);
+        margin: 24px 0;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      h3 {
+        font-size: 14px;
+        margin: 0 0 4px;
+      }
+      p {
+        margin: 0 0 10px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+      }
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 14px;
+      }
+      .stat {
+        background: var(--accent-soft);
+        border-radius: 10px;
+        padding: 10px 14px;
+      }
+      .stat .num {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .stat .lbl {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+      li {
+        margin-bottom: 4px;
+      }
+      code {
+        background: #f1f5f9;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 11.5px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+      }
+      .stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        background: #f1f5f9;
+        color: var(--ink);
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .arch {
+        background: #0f172a;
+        color: #cbd5e1;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        font-size: 11.5px;
+        line-height: 1.6;
+        padding: 14px 16px;
+        border-radius: 10px;
+        white-space: pre;
+        overflow-x: auto;
+      }
+      .arch .h {
+        color: #7dd3fc;
+      }
+      .arch .a {
+        color: #fbbf24;
+      }
+      footer {
+        margin-top: 30px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        .page {
+          box-shadow: none;
+          margin: 0;
+          padding: 24px 30px;
+          border-radius: 0;
+          max-width: none;
+        }
+        .arch {
+          background: #f1f5f9;
+          color: #0f172a;
+        }
+        .arch .h,
+        .arch .a {
+          color: #0284c7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <div class="brand">
+          <span class="tile" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="22" height="22">
+              <path
+                d="M8 36 L18 36 L22 26 L30 46 L38 18 L42 36 L56 36"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span class="pill">Portfolio · 2026</span>
+        </div>
+        <h1>MedScribe AI</h1>
+        <p class="tagline">
+          Ambient AI clinical documentation — record a visit, watch the
+          transcript build live, get a validated SOAP note in seconds.
+        </p>
+        <div class="meta">
+          <span><strong>Role:</strong> Solo full-stack + AI engineer</span>
+          <span><strong>Author:</strong> Bajrang Solunke</span>
+          <span
+            ><a href="REPLACE_WITH_GITHUB_URL">github.com/&hellip;/medscribe-ai</a></span
+          >
+          <span><a href="REPLACE_WITH_DEMO_VIDEO_URL">▶ Demo video</a></span>
+        </div>
+      </header>
+
+      <hr />
+
+      <section>
+        <h2>The Problem</h2>
+        <p>
+          Clinicians spend an estimated <strong>1–2 hours daily</strong> on
+          documentation — typing SOAP notes, looking up ICD codes, summarising
+          visits. It's the leading driver of physician burnout. Ambient AI
+          scribes (Abridge, Suki, Nuance DAX) prove the workflow works, but
+          they're closed enterprise products. Building an open prototype
+          end-to-end exercises every skill needed to build modern AI
+          applications: speech, streaming, structured generation, real-time
+          orchestration, and a healthcare-grade UX.
+        </p>
+      </section>
+
+      <section>
+        <h2>What It Does</h2>
+        <div class="grid-3">
+          <div class="stat">
+            <div class="num">5</div>
+            <div class="lbl">AI pipeline stages</div>
+          </div>
+          <div class="stat">
+            <div class="num">~4s</div>
+            <div class="lbl">Live transcript latency</div>
+          </div>
+          <div class="stat">
+            <div class="num">36</div>
+            <div class="lbl">Backend tests (all mocked Groq)</div>
+          </div>
+        </div>
+        <p style="margin-top: 14px">
+          Doctor speaks → audio chunks stream to the backend every 4 seconds →
+          Groq Whisper transcribes each chunk → transcript appears live in the
+          browser via Server-Sent Events → doctor clicks Stop → Llama 3.3 70B
+          generates a SOAP note → suggests ICD-10 codes → codes are validated
+          against the local CMS catalog (hallucinated codes dropped) → patient
+          summary written → doctor reviews / edits / accepts and exports to PDF.
+        </p>
+      </section>
+
+      <section>
+        <h2>Architecture</h2>
+        <div class="arch"><span class="h">BROWSER</span>  React 19 · TypeScript · Vite · Tailwind v4 · shadcn-style UI · TanStack Query · Zustand
+        <span class="a">↓</span>  HTTPS + JWT · POST /audio-chunk · SSE /stream
+<span class="h">BACKEND</span>  FastAPI · async · BackgroundTasks · sse-starlette
+        ChunkTranscriber  →  Groq Whisper (live transcription per chunk)
+        FinalizePipeline  →  SOAP → ICD candidates → catalog validate → summary
+        <span class="a">↓</span>
+<span class="h">DATA + AI</span>
+        SQLite via SQLAlchemy + Alembic
+        Groq (Whisper-large-v3-turbo + Llama 3.3 70B, free tier)
+        ICD-10-CM catalog (CMS, seeded into SQLite for offline validation)
+        ReportLab PDF templates</div>
+      </section>
+
+      <hr />
+
+      <section class="grid-2">
+        <div>
+          <h2>Key Engineering Decisions</h2>
+          <ul>
+            <li>
+              <strong>Catalog-validated ICD codes</strong> — LLM suggests, local
+              CMS catalog confirms; hallucinated codes flagged not silently
+              dropped, so the trust story is visible
+            </li>
+            <li>
+              <strong>Chunked HTTP + SSE</strong> over WebSocket — reuses the
+              existing transport, no new auth scheme, simpler ops
+            </li>
+            <li>
+              <strong>Stop-restart MediaRecorder</strong> for live chunks —
+              ~50 ms gap accepted; trade-off documented in the spec
+            </li>
+            <li>
+              <strong>OAuth + email/password fallback</strong> — Google ID
+              tokens verified server-side via Google's JWKs; account-linking
+              on email match
+            </li>
+            <li>
+              <strong>Brainstorming &rarr; spec &rarr; plan &rarr; commit</strong> —
+              shipped two sub-projects this way; specs and plans tracked under
+              <code>docs/superpowers/</code>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h2>Features Built</h2>
+          <ul>
+            <li>JWT authentication (bcrypt) + Google OAuth sign-in</li>
+            <li>Browser MediaRecorder with stop-restart 4 s chunk loop</li>
+            <li>Live audio waveform (Web Audio API · AnalyserNode)</li>
+            <li>
+              SSE streaming pipeline with reconnection + heartbeat
+            </li>
+            <li>
+              Catalog-validated ICD-10 suggestions with AI confidence meters
+            </li>
+            <li>Editable SOAP note with optimistic save</li>
+            <li>ReportLab PDF export</li>
+            <li>
+              Dashboard with stats, time-grouped sessions, search, filter,
+              delete, retry-finalize
+            </li>
+            <li>Demo banner / no-PHI guardrails</li>
+          </ul>
+        </div>
+      </section>
+
+      <section style="margin-top: 18px">
+        <h2>Stack</h2>
+        <div class="stack">
+          <span class="chip">React 19</span><span class="chip">TypeScript</span
+          ><span class="chip">Vite 8</span><span class="chip">Tailwind v4</span
+          ><span class="chip">TanStack Query</span
+          ><span class="chip">Zustand</span><span class="chip">FastAPI</span
+          ><span class="chip">SQLAlchemy 2</span><span class="chip">SQLite</span
+          ><span class="chip">Alembic</span><span class="chip">Pydantic v2</span
+          ><span class="chip">sse-starlette</span
+          ><span class="chip">Groq Whisper</span
+          ><span class="chip">Llama 3.3 70B</span
+          ><span class="chip">google-auth (OAuth 2.0)</span
+          ><span class="chip">ReportLab</span><span class="chip">pytest</span
+          ><span class="chip">GitHub Actions CI</span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>What's Out of Scope</h2>
+        <p style="color: var(--muted)">
+          This is a prototype, not a production clinical product. Real adoption
+          would require HIPAA-compliant infrastructure (BAAs with cloud + AI
+          vendors), Epic / Cerner integration, specialty-specific accuracy
+          validation, and audit logging. Roadmap items: speaker diarisation,
+          medical entity extraction, risk flagging, AI follow-up questions.
+        </p>
+      </section>
+
+      <footer>
+        <span>MedScribe AI · 2026</span>
+        <span>For portfolio / educational use. Not for clinical decision-making.</span>
+      </footer>
+    </main>
+  </body>
+</html>

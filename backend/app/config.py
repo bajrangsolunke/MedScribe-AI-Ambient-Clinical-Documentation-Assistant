@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MIN: int = 60
     DATABASE_URL: str = "sqlite:///./medscribe.db"
     CORS_ORIGINS: str = "http://localhost:5173"
+    # Google OAuth — get a client ID at https://console.cloud.google.com (free).
+    # When empty, the /auth/google endpoint returns 503 — the email/password
+    # path keeps working in dev without Google credentials.
+    GOOGLE_OAUTH_CLIENT_ID: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
