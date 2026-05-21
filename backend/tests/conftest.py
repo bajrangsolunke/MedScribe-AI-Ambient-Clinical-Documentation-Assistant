@@ -61,9 +61,14 @@ def client(
 
 @pytest.fixture
 def mock_groq(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Stand-in for Groq calls. Tests override the canned values as needed."""
+    """Stand-in for Groq calls.
+
+    Whisper mock varies per call ("fragment-1", "fragment-2", ...) so tests
+    can assert chunk ordering. LLM mock returns canned SOAP/ICD/summary
+    fixtures routed by schema class name.
+    """
+    counters = {"transcribe": 0}
     canned: dict[str, Any] = {
-        "transcript": "Patient reports sharp chest pain on the left side, started two days ago.",
         "soap": {
             "subjective": "47y M with sharp left-sided chest pain x 2 days.",
             "objective": "Vitals stable, no acute distress.",
@@ -81,13 +86,16 @@ def mock_groq(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             ],
         },
         "summary": {"summary": "Patient seen for left-sided chest pain x 2d; conservative plan."},
+        # Back-compat for any test still reading mock_groq["transcript"]:
+        # the first fragment returned by fake_transcribe.
+        "transcript": "fragment-1",
     }
 
     def fake_transcribe(audio_bytes: bytes, filename: str) -> str:
-        return canned["transcript"]
+        counters["transcribe"] += 1
+        return f"fragment-{counters['transcribe']}"
 
     def fake_complete_json(prompt: str, schema: type, **kwargs: Any) -> Any:
-        # Route by schema name — each pipeline stage uses a distinct schema
         name = schema.__name__
         if name == "SoapPayload":
             return schema.model_validate(canned["soap"])

@@ -10,6 +10,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
+    Form,
     HTTPException,
     UploadFile,
     status,
@@ -27,8 +28,10 @@ from app.schemas.session import (
     SessionOut,
     SoapUpdate,
 )
+from app.schemas.transcript import ChunkUploadResponse
+from app.services.chunk_transcriber import transcribe_chunk
 from app.services.event_bus import SENTINEL_CLOSE, event_bus
-from app.services.scribe_pipeline import ScribePipeline
+from app.services.finalize_pipeline import FinalizePipeline
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -79,60 +82,74 @@ def get_session(
     return _get_owned_session(session_id, user, db)
 
 
-def _run_pipeline_in_thread(session_id: int, audio_bytes: bytes, filename: str) -> None:
-    """BackgroundTask entrypoint. Opens its own DB session so the request-scoped one is free."""
+@router.post(
+    "/{session_id}/audio-chunk",
+    response_model=ChunkUploadResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def upload_audio_chunk(
+    session_id: int,
+    file: UploadFile = File(...),
+    sequence: int = Form(...),
+    duration_ms: int | None = Form(None),
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ChunkUploadResponse:
+    s = _get_owned_session(session_id, user, db)
+    if s.status not in (SessionStatus.created, SessionStatus.recording):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot upload chunk: session status is {s.status.value}",
+        )
+
+    audio_bytes = await file.read()
+    filename = file.filename or f"session-{session_id}-seq-{sequence}.webm"
+
+    fragment = transcribe_chunk(
+        session_id=session_id,
+        audio_bytes=audio_bytes,
+        sequence=sequence,
+        filename=filename,
+        db=db,
+        duration_ms=duration_ms,
+    )
+    db.refresh(s)
+    return ChunkUploadResponse(
+        sequence=fragment.sequence,
+        text=fragment.text,
+        transcript_so_far=s.transcript_text or "",
+    )
+
+
+def _run_finalize_in_thread(session_id: int) -> None:
+    """BackgroundTask entrypoint: opens its own DB session for thread-safety."""
     db = SessionLocal()
     try:
-        ScribePipeline().run(session_id, audio_bytes, filename, db)
+        FinalizePipeline().run(session_id, db)
     finally:
         db.close()
 
 
-@router.post("/{session_id}/audio", status_code=status.HTTP_202_ACCEPTED)
-async def upload_audio(
+@router.post("/{session_id}/finalize", status_code=status.HTTP_202_ACCEPTED)
+def finalize_session(
     session_id: int,
     background: BackgroundTasks,
-    file: UploadFile = File(...),
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     s = _get_owned_session(session_id, user, db)
-    if s.status == SessionStatus.processing:
-        raise HTTPException(status_code=409, detail="Session is already processing")
-
-    audio_bytes = await file.read()
-    filename = file.filename or f"session-{session_id}.webm"
-    background.add_task(_run_pipeline_in_thread, session_id, audio_bytes, filename)
-    return {"status": "accepted", "filename": filename}
-
-
-@router.post("/{session_id}/retry", status_code=status.HTTP_202_ACCEPTED)
-async def retry_session(
-    session_id: int,
-    background: BackgroundTasks,
-    file: UploadFile = File(...),
-    db: DbSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> dict[str, str]:
-    s = _get_owned_session(session_id, user, db)
-    if s.status != SessionStatus.failed:
-        raise HTTPException(status_code=409, detail="Only failed sessions can be retried")
-
-    # Clear prior partial results so the pipeline starts fresh
-    s.error_message = None
-    s.transcript_text = None
-    s.visit_summary = None
-    s.status = SessionStatus.created
-    if s.soap_note is not None:
-        db.delete(s.soap_note)
-    for icd in list(s.icd_suggestions):
-        db.delete(icd)
-    db.commit()
-
-    audio_bytes = await file.read()
-    filename = file.filename or f"session-{session_id}.webm"
-    background.add_task(_run_pipeline_in_thread, session_id, audio_bytes, filename)
-    return {"status": "accepted", "filename": filename}
+    if s.status != SessionStatus.recording:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot finalize: session status is {s.status.value} (need 'recording')",
+        )
+    if not s.transcript_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot finalize: transcript is empty",
+        )
+    background.add_task(_run_finalize_in_thread, session_id)
+    return {"status": "accepted"}
 
 
 @router.get("/{session_id}/stream")
@@ -149,7 +166,6 @@ async def stream_session(
             try:
                 event = await asyncio.to_thread(q.get, True, 30)
             except Exception:  # queue.Empty after timeout
-                # Heartbeat to keep the connection open
                 yield {"event": "ping", "data": "{}"}
                 continue
             if event is SENTINEL_CLOSE:

@@ -23,22 +23,26 @@ def test_pdf_export_returns_valid_pdf(
         "/auth/register", json={"email": "doc@example.com", "password": "supersecret"}
     ).json()["access_token"]
     auth = {"Authorization": f"Bearer {token}"}
-    session_id = client.post(
+    sid = client.post(
         "/sessions",
         json={"patient_label": "Patient #1", "chief_complaint": "chest pain"},
         headers=auth,
     ).json()["id"]
+
+    # Streaming flow: upload one chunk, then finalize.
     client.post(
-        f"/sessions/{session_id}/audio",
+        f"/sessions/{sid}/audio-chunk",
         files={"file": ("clip.webm", b"x", "audio/webm")},
+        data={"sequence": "0"},
         headers=auth,
     )
+    client.post(f"/sessions/{sid}/finalize", headers=auth)
 
-    pdf = client.get(f"/sessions/{session_id}/export.pdf", headers=auth)
+    pdf = client.get(f"/sessions/{sid}/export.pdf", headers=auth)
     assert pdf.status_code == 200
     assert pdf.headers["content-type"] == "application/pdf"
     assert pdf.content.startswith(b"%PDF")
-    assert len(pdf.content) > 1000  # sanity: non-trivial PDF
+    assert len(pdf.content) > 1000
 
 
 def test_pdf_export_404_for_unknown_session(client: TestClient) -> None:

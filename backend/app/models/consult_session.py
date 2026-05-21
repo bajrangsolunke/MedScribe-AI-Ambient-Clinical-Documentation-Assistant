@@ -9,6 +9,7 @@ from app.database import Base
 
 class SessionStatus(str, enum.Enum):
     created = "created"
+    recording = "recording"
     processing = "processing"
     completed = "completed"
     failed = "failed"
@@ -44,4 +45,9 @@ class ConsultSession(Base):
     )
     icd_suggestions: Mapped[list["IcdSuggestion"]] = relationship(  # noqa: F821
         back_populates="session", cascade="all, delete-orphan"
+    )
+    transcripts: Mapped[list["Transcript"]] = relationship(  # noqa: F821
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="Transcript.sequence",
     )
