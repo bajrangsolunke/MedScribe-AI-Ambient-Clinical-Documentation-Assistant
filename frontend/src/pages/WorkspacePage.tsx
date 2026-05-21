@@ -49,6 +49,27 @@ export function WorkspacePage() {
     onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
   });
 
+  const updateIcd = useMutation({
+    mutationFn: ({
+      icdId,
+      patch,
+    }: {
+      icdId: number;
+      patch: { code?: string; description?: string };
+    }) => api.sessions.updateIcd(sessionId!, icdId, patch),
+    onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
+  });
+
+  const deleteIcd = useMutation({
+    mutationFn: (icdId: number) => api.sessions.deleteIcd(sessionId!, icdId),
+    onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
+  });
+
+  const updateSummary = useMutation({
+    mutationFn: (summary: string) => api.sessions.updateSummary(sessionId!, summary),
+    onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
+  });
+
   async function handleCreateSession(e: FormEvent) {
     e.preventDefault();
     const s = await api.sessions.create(patientLabel.trim(), chiefComplaint.trim() || undefined);
@@ -181,8 +202,16 @@ export function WorkspacePage() {
                 onSetAccepted={(icdId, accepted) =>
                   setIcdAccepted.mutateAsync({ icdId, accepted }).then(() => undefined)
                 }
+                onUpdate={(icdId, patch) =>
+                  updateIcd.mutateAsync({ icdId, patch }).then(() => undefined)
+                }
+                onDelete={(icdId) => deleteIcd.mutateAsync(icdId).then(() => undefined)}
               />
-              <SummaryCard summary={detail?.visit_summary ?? null} />
+              <SummaryCard
+                summary={detail?.visit_summary ?? null}
+                editable={streaming.phase === "completed"}
+                onSave={(next) => updateSummary.mutateAsync(next).then(() => undefined)}
+              />
             </>
           )}
         </div>

@@ -115,6 +115,24 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ accepted }),
       }),
+    updateIcd: (
+      sessionId: number,
+      icdId: number,
+      patch: { code?: string; description?: string; accepted?: boolean },
+    ) =>
+      request<SessionDetail>(`/sessions/${sessionId}/icd/${icdId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+    deleteIcd: (sessionId: number, icdId: number) =>
+      request<SessionDetail>(`/sessions/${sessionId}/icd/${icdId}`, {
+        method: "DELETE",
+      }),
+    updateSummary: (sessionId: number, summary: string) =>
+      request<SessionDetail>(`/sessions/${sessionId}/summary`, {
+        method: "PATCH",
+        body: JSON.stringify({ summary }),
+      }),
     exportPdf: async (id: number): Promise<Blob> => {
       const resp = await fetch(`${API_URL}/sessions/${id}/export.pdf`, {
         headers: cachedToken ? { Authorization: `Bearer ${cachedToken}` } : undefined,

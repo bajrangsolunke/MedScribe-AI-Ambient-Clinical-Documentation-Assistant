@@ -51,5 +51,13 @@ class SoapUpdate(BaseModel):
     plan: str
 
 
-class IcdAcceptedUpdate(BaseModel):
-    accepted: bool
+class IcdUpdate(BaseModel):
+    """Partial update for an ICD suggestion. Any field may be omitted."""
+
+    code: str | None = None
+    description: str | None = None
+    accepted: bool | None = None
+
+
+class SummaryUpdate(BaseModel):
+    summary: str
