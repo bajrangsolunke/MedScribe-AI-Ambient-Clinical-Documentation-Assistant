@@ -124,7 +124,7 @@ export function WorkspacePage() {
         chiefComplaint={chiefComplaint || null}
         isRecording={recorder.isRecording}
         duration={recorder.duration}
-        canRecord={streaming.phase === "idle" && !recorder.isRecording}
+        canRecord={streaming.phase === "idle" || streaming.phase === "recording"}
         onStart={handleStartRecording}
         onStop={handleStopRecording}
       />
