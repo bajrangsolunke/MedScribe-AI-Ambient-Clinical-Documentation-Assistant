@@ -9,13 +9,16 @@ import { api } from "@/services/api";
 import type { SessionStatus } from "@/types";
 
 function statusBadge(status: SessionStatus) {
-  const map: Record<SessionStatus, { label: string; variant: "success" | "info" | "danger" | "neutral" }> =
-    {
-      completed: { label: "Completed", variant: "success" },
-      processing: { label: "Processing", variant: "info" },
-      created: { label: "Pending", variant: "neutral" },
-      failed: { label: "Failed", variant: "danger" },
-    };
+  const map: Record<
+    SessionStatus,
+    { label: string; variant: "success" | "info" | "danger" | "neutral" | "warning" }
+  > = {
+    completed: { label: "Completed", variant: "success" },
+    processing: { label: "Processing", variant: "info" },
+    recording: { label: "Recording", variant: "warning" },
+    created: { label: "Pending", variant: "neutral" },
+    failed: { label: "Failed", variant: "danger" },
+  };
   const { label, variant } = map[status];
   return <Badge variant={variant}>{label}</Badge>;
 }

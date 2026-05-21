@@ -1,15 +1,34 @@
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Mic } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { StageState } from "@/hooks/useScribeSession";
+import type { StageState } from "@/hooks/useStreamingSession";
 
 interface Props {
   stages: StageState[];
+  liveTranscriptActive?: boolean;
+  liveTranscriptDone?: boolean;
 }
 
-export function PipelineStrip({ stages }: Props) {
+export function PipelineStrip({ stages, liveTranscriptActive, liveTranscriptDone }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-sky-50 px-4 py-3">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+          liveTranscriptDone
+            ? "bg-emerald-100 text-emerald-700"
+            : liveTranscriptActive
+              ? "bg-rose-100 text-rose-700 animate-pulse"
+              : "bg-slate-200 text-slate-500",
+        )}
+      >
+        {liveTranscriptDone ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <Mic className="h-3.5 w-3.5" />
+        )}
+        Live transcript
+      </span>
       {stages.map((s) => (
         <span
           key={s.key}

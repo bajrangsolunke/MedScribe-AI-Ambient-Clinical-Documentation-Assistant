@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRecorder } from "@/hooks/useRecorder";
-import { useScribeSession } from "@/hooks/useScribeSession";
+import { useStreamingSession } from "@/hooks/useStreamingSession";
 import { api } from "@/services/api";
 import type { SoapPayload } from "@/types";
 
@@ -24,30 +24,28 @@ export function WorkspacePage() {
   const [patientLabel, setPatientLabel] = useState("");
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const recorder = useRecorder();
-  const pipeline = useScribeSession(sessionId);
 
+  const recorder = useRecorder({ chunkMs: 4000 });
+  const streaming = useStreamingSession(sessionId);
+
+  // After the pipeline completes, fetch the full session detail (SOAP, ICDs, summary).
   const detailQuery = useQuery({
     queryKey: ["session", sessionId],
     queryFn: () => api.sessions.get(sessionId!),
-    enabled: sessionId !== null && pipeline.phase === "completed",
+    enabled: sessionId !== null && streaming.phase === "completed",
     refetchOnMount: true,
   });
 
   const updateSoap = useMutation({
     mutationFn: (payload: Omit<SoapPayload, "edited_at">) =>
       api.sessions.updateSoap(sessionId!, payload),
-    onSuccess: (data) => {
-      queryClient.setQueryData(["session", sessionId], data);
-    },
+    onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
   });
 
   const setIcdAccepted = useMutation({
     mutationFn: ({ icdId, accepted }: { icdId: number; accepted: boolean }) =>
       api.sessions.setIcdAccepted(sessionId!, icdId, accepted),
-    onSuccess: (data) => {
-      queryClient.setQueryData(["session", sessionId], data);
-    },
+    onSuccess: (data) => queryClient.setQueryData(["session", sessionId], data),
   });
 
   async function handleCreateSession(e: FormEvent) {
@@ -56,19 +54,13 @@ export function WorkspacePage() {
     setSessionId(s.id);
   }
 
-  async function handleStop() {
-    recorder.stop();
-    // Wait for the blob to be assembled (onstop populates audioBlob asynchronously).
-    // useEffect-driven kickoff:
+  function handleStartRecording() {
+    void recorder.start((blob, isFinal) => streaming.pushChunk(blob, isFinal));
   }
 
-  // Kick off the pipeline as soon as the recorder produces a blob.
-  if (
-    sessionId !== null &&
-    recorder.audioBlob !== null &&
-    pipeline.phase === "idle"
-  ) {
-    void pipeline.start(recorder.audioBlob, `session-${sessionId}.webm`);
+  function handleStopRecording() {
+    recorder.stop();
+    // useStreamingSession.pushChunk handles the finalize call when isFinal=true.
   }
 
   if (sessionId === null) {
@@ -116,8 +108,14 @@ export function WorkspacePage() {
   }
 
   const detail = detailQuery.data;
-  const isUploading = pipeline.phase === "uploading";
-  const isStreaming = pipeline.phase === "streaming";
+  const showPipelineStrip = streaming.phase !== "idle";
+  const liveTranscriptActive = streaming.phase === "recording";
+  const liveTranscriptDone = streaming.phase !== "idle" && streaming.phase !== "recording";
+  // During recording, show the live-accumulating transcript. After finalize,
+  // fall back to the persisted transcript (identical content, but stays around
+  // even if the SSE stream closes).
+  const transcriptToShow =
+    streaming.phase === "completed" ? (detail?.transcript_text ?? streaming.transcript) : streaming.transcript;
 
   return (
     <div className="space-y-4">
@@ -126,9 +124,9 @@ export function WorkspacePage() {
         chiefComplaint={chiefComplaint || null}
         isRecording={recorder.isRecording}
         duration={recorder.duration}
-        canRecord={pipeline.phase === "idle" && recorder.audioBlob === null}
-        onStart={() => void recorder.start()}
-        onStop={handleStop}
+        canRecord={streaming.phase === "idle" && !recorder.isRecording}
+        onStart={handleStartRecording}
+        onStop={handleStopRecording}
       />
 
       {recorder.error && (
@@ -138,37 +136,52 @@ export function WorkspacePage() {
         </div>
       )}
 
-      {(isUploading || isStreaming || pipeline.phase === "completed" || pipeline.phase === "failed") && (
-        <PipelineStrip stages={pipeline.stages} />
+      {showPipelineStrip && (
+        <PipelineStrip
+          stages={streaming.stages}
+          liveTranscriptActive={liveTranscriptActive}
+          liveTranscriptDone={liveTranscriptDone}
+        />
       )}
 
-      {pipeline.phase === "failed" && (
+      {streaming.phase === "failed" && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <div className="font-medium">Pipeline failed</div>
-          <div className="mt-1">{pipeline.error}</div>
+          <div className="mt-1">{streaming.error}</div>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TranscriptPanel transcript={detail?.transcript_text ?? null} />
+        <TranscriptPanel
+          transcript={transcriptToShow || null}
+          live={streaming.phase === "recording"}
+        />
         <div className="space-y-4">
-          <SoapPanel
-            soap={detail?.soap_note ?? null}
-            editable={pipeline.phase === "completed"}
-            onSave={(payload) => updateSoap.mutateAsync(payload).then(() => undefined)}
-          />
-          <IcdSuggestionsList
-            icds={detail?.icd_suggestions ?? []}
-            editable={pipeline.phase === "completed"}
-            onSetAccepted={(icdId, accepted) =>
-              setIcdAccepted.mutateAsync({ icdId, accepted }).then(() => undefined)
-            }
-          />
-          <SummaryCard summary={detail?.visit_summary ?? null} />
+          {streaming.phase === "recording" || streaming.phase === "idle" ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+              SOAP note, ICD codes, and visit summary generate after you click Stop.
+            </div>
+          ) : (
+            <>
+              <SoapPanel
+                soap={detail?.soap_note ?? null}
+                editable={streaming.phase === "completed"}
+                onSave={(payload) => updateSoap.mutateAsync(payload).then(() => undefined)}
+              />
+              <IcdSuggestionsList
+                icds={detail?.icd_suggestions ?? []}
+                editable={streaming.phase === "completed"}
+                onSetAccepted={(icdId, accepted) =>
+                  setIcdAccepted.mutateAsync({ icdId, accepted }).then(() => undefined)
+                }
+              />
+              <SummaryCard summary={detail?.visit_summary ?? null} />
+            </>
+          )}
         </div>
       </div>
 
-      {pipeline.phase === "completed" && (
+      {streaming.phase === "completed" && (
         <div className="flex justify-end">
           <Button onClick={() => navigate(`/sessions/${sessionId}`)}>View / download PDF →</Button>
         </div>

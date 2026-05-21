@@ -78,22 +78,21 @@ export const api = {
       }),
     list: () => request<SessionSummary[]>("/sessions"),
     get: (id: number) => request<SessionDetail>(`/sessions/${id}`),
-    uploadAudio: (id: number, audio: Blob, filename: string) => {
+    uploadChunk: (id: number, audio: Blob, sequence: number, durationMs?: number) => {
       const fd = new FormData();
-      fd.append("file", audio, filename);
-      return request<{ status: string; filename: string }>(`/sessions/${id}/audio`, {
-        method: "POST",
-        body: fd,
-      });
+      fd.append("file", audio, `chunk-${sequence}.webm`);
+      fd.append("sequence", String(sequence));
+      if (durationMs != null) fd.append("duration_ms", String(durationMs));
+      return request<{ sequence: number; text: string; transcript_so_far: string }>(
+        `/sessions/${id}/audio-chunk`,
+        { method: "POST", body: fd },
+      );
     },
-    retry: (id: number, audio: Blob, filename: string) => {
-      const fd = new FormData();
-      fd.append("file", audio, filename);
-      return request<{ status: string; filename: string }>(`/sessions/${id}/retry`, {
+    finalize: (id: number) =>
+      request<{ status: string }>(`/sessions/${id}/finalize`, {
         method: "POST",
-        body: fd,
-      });
-    },
+        body: JSON.stringify({}),
+      }),
     updateSoap: (id: number, soap: Omit<SoapPayload, "edited_at">) =>
       request<SessionDetail>(`/sessions/${id}/soap`, {
         method: "PATCH",

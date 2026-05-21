@@ -2,7 +2,7 @@
 
 > Ambient AI Clinical Documentation Assistant — record a patient visit, watch live AI orchestration transcribe it, generate a SOAP note, suggest catalog-validated ICD-10 codes, and write a patient-friendly summary. Export to PDF.
 
-**Status**: Sub-project #1 (Core Scribe) complete. Live streaming transcription and clinical intelligence (diarization, entity extraction, risk flagging) are roadmap items.
+**Status**: Sub-projects #1 (Core Scribe) and #2 (Live Streaming) complete. Clinical intelligence (diarization, entity extraction, risk flagging) is the roadmap item.
 
 ## Demo
 
@@ -13,14 +13,18 @@
 ## What it does
 
 ```
-Doctor records in browser  →  Groq Whisper transcribes  →  Llama 3.3 70B
-generates SOAP note  →  Llama suggests ICD-10 candidates  →  Local CMS
-catalog validates them (drops fakes)  →  Llama writes a visit summary  →
-Doctor reviews / edits / accepts codes  →  Download PDF
+Doctor speaks  →  every 4s a chunk is sent  →  Groq Whisper transcribes
+each chunk  →  transcript builds live in the browser via SSE  →
+doctor clicks Stop  →  Llama 3.3 70B generates SOAP  →  Llama suggests
+ICD-10 candidates  →  local CMS catalog validates them (drops fakes)  →
+Llama writes a visit summary  →  doctor reviews / edits / accepts codes  →
+Download PDF
 ```
 
-Live progress is streamed to the browser via **Server-Sent Events**, so the
-doctor *sees* each step finish.
+The transcript appears in the browser in near real time (~4s latency per
+chunk) via **chunked HTTP upload + Server-Sent Events**. SOAP/ICD/summary
+runs once after Stop — matching how real ambient scribe products (Abridge,
+Suki) work.
 
 ## Architecture
 
@@ -35,16 +39,17 @@ BROWSER (React + TS + Tailwind + shadcn/ui)
         v
 BACKEND (FastAPI, async)
   Auth router       — register / login / me
-  Sessions router   — CRUD, /audio upload, /stream SSE
+  Sessions router   — CRUD, /audio-chunk (live), /finalize, /stream SSE
   Export router     — /export.pdf (ReportLab)
-  ScribePipeline    — orchestrates 5 steps as BackgroundTask, emits SSE events
+  ChunkTranscriber  — synchronously transcribes each chunk, emits SSE fragments
+  FinalizePipeline  — orchestrates SOAP -> ICD -> validate -> summary after Stop
         |
         +----------+----------+----------------+
         v                     v                v
   AI SERVICES           LOCAL DATA       CATALOG + EXPORT
   Groq Whisper          SQLite via       ICD-10-CM catalog
   Groq Llama 3.3 70B    SQLAlchemy       (seeded from CMS TSV)
-  (single API key)      5 tables         ReportLab PDF
+  (single API key)      6 tables         ReportLab PDF
 ```
 
 ## Tech stack
@@ -135,16 +140,16 @@ cd backend
 .venv/bin/pytest -v
 ```
 
-18 tests across `test_auth.py`, `test_icd_validator.py`, `test_scribe_pipeline.py`,
-`test_sessions_api.py`, and `test_export.py`. All Groq calls are mocked via a
-`conftest.py` fixture — tests never hit the real API.
+28 tests across `test_auth.py`, `test_icd_validator.py`, `test_chunk_transcriber.py`,
+`test_finalize_pipeline.py`, `test_sessions_api.py`, and `test_export.py`. All
+Groq calls are mocked via a `conftest.py` fixture — tests never hit the real API.
 
 ## Roadmap
 
 | # | Sub-project | What it adds |
 |---|-------------|--------------|
-| 1 ✅ | **Core Scribe** (this) | Record → SOAP + ICD + Summary → PDF |
-| 2 | Live Streaming | Chunked Whisper, live transcript as the doctor talks |
+| 1 ✅ | **Core Scribe** | Record → SOAP + ICD + Summary → PDF |
+| 2 ✅ | **Live Streaming** | Chunked Whisper, live transcript as the doctor talks |
 | 3 | Clinical Intelligence | Speaker diarization, entity extraction, risk flagging, AI follow-up questions |
 
 ## Design docs

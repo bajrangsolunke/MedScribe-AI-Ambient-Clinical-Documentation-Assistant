@@ -1,4 +1,6 @@
-export type SessionStatus = "created" | "processing" | "completed" | "failed";
+export type SessionStatus = "created" | "recording" | "processing" | "completed" | "failed";
+
+export type ScribePhase = "idle" | "recording" | "finalizing" | "completed" | "failed";
 
 export interface User {
   id: number;
@@ -55,7 +57,14 @@ export type PipelineStage =
   | "icd_validated"
   | "summary";
 
-export type StageStatus = "started" | "in_progress" | "done" | "complete" | "error" | "pending";
+export type StageStatus =
+  | "started"
+  | "in_progress"
+  | "done"
+  | "complete"
+  | "error"
+  | "pending"
+  | "fragment";
 
 export interface PipelineEvent {
   stage: PipelineStage;
