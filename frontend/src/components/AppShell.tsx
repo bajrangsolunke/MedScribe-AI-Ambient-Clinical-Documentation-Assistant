@@ -1,6 +1,6 @@
 import { AlertTriangle, LogOut } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
 import { avatarColor, patientInitials } from "@/lib/sessions";
@@ -47,15 +47,48 @@ export function AppShell({ children }: Props) {
     <div className="flex min-h-full flex-col">
       <header className="border-b border-slate-800 bg-slate-900 text-white shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 text-base font-semibold tracking-tight"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sky-300">
-              <BrandMark className="h-5 w-5" />
-            </span>
-            <span>MedScribe AI</span>
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 text-base font-semibold tracking-tight"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sky-300">
+                <BrandMark className="h-5 w-5" />
+              </span>
+              <span>MedScribe AI</span>
+            </Link>
+            {user && (
+              <nav className="hidden items-center gap-1 sm:flex">
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) =>
+                    cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )
+                  }
+                >
+                  Sessions
+                </NavLink>
+                <NavLink
+                  to="/patients"
+                  className={({ isActive }) =>
+                    cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )
+                  }
+                >
+                  Patients
+                </NavLink>
+              </nav>
+            )}
+          </div>
           {user && (
             <div className="relative" ref={menuRef}>
               <button

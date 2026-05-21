@@ -22,10 +22,38 @@ export interface SessionSummary {
   started_at: string;
   completed_at: string | null;
   error_message: string | null;
+  patient_id: number | null;
   icd_count: number;
   has_soap: boolean;
   transcript_chars: number;
   duration_sec: number | null;
+}
+
+export interface Patient {
+  id: number;
+  full_label: string;
+  date_of_birth: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  last_visit_at: string | null;
+  visit_count: number;
+}
+
+export interface PatientDetail extends Patient {
+  sessions: SessionSummary[];
+}
+
+export interface PatientCreate {
+  full_label: string;
+  date_of_birth?: string | null;
+  notes?: string | null;
+}
+
+export interface PatientUpdate {
+  full_label?: string;
+  date_of_birth?: string | null;
+  notes?: string | null;
 }
 
 export interface SoapPayload {

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Download } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { IcdSuggestionsList } from "@/components/IcdSuggestionsList";
 import { PatientHeader } from "@/components/PatientHeader";
+import { PatientPicker } from "@/components/PatientPicker";
 import { PipelineStrip } from "@/components/PipelineStrip";
 import { SoapPanel } from "@/components/SoapPanel";
 import { SummaryCard } from "@/components/SummaryCard";
@@ -17,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useStreamingSession } from "@/hooks/useStreamingSession";
 import { api } from "@/services/api";
-import type { SoapPayload } from "@/types";
+import type { Patient, SoapPayload } from "@/types";
 
 async function downloadSessionPdf(id: number): Promise<void> {
   const blob = await api.sessions.exportPdf(id);
@@ -34,9 +35,34 @@ async function downloadSessionPdf(id: number): Promise<void> {
 export function WorkspacePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [patientLabel, setPatientLabel] = useState("");
+  const [searchParams] = useSearchParams();
+  const presetPatientId = searchParams.get("patient_id");
+  const presetLabel = searchParams.get("label");
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [pickedPatient, setPickedPatient] = useState<Patient | null>(null);
+
+  // If we arrived from PatientDetailPage with ?patient_id=…, pre-load
+  // the patient so the picker shows them already selected.
+  const presetQuery = useQuery({
+    queryKey: ["patient", presetPatientId],
+    queryFn: () => api.patients.get(Number(presetPatientId)),
+    enabled: presetPatientId !== null,
+  });
+
+  // Adapt-to-prop pattern: sync the picker when the preset query resolves
+  // (React's recommended approach — set state during render, not in useEffect).
+  const [trackedPresetId, setTrackedPresetId] = useState<string | null>(presetPatientId);
+  if (presetPatientId !== trackedPresetId) {
+    setTrackedPresetId(presetPatientId);
+    setPickedPatient(null);
+  }
+  if (presetQuery.data && pickedPatient?.id !== presetQuery.data.id) {
+    setPickedPatient(presetQuery.data);
+  }
+
+  // Display fallback in case the patient hasn't loaded yet but we have a label
+  const displayLabel = pickedPatient?.full_label ?? presetLabel ?? "";
 
   const recorder = useRecorder({ chunkMs: 4000 });
   const streaming = useStreamingSession(sessionId);
@@ -84,8 +110,19 @@ export function WorkspacePage() {
 
   async function handleCreateSession(e: FormEvent) {
     e.preventDefault();
-    const s = await api.sessions.create(patientLabel.trim(), chiefComplaint.trim() || undefined);
+    if (!pickedPatient) return;
+    const s = await api.sessions.create(
+      pickedPatient.full_label,
+      chiefComplaint.trim() || undefined,
+      pickedPatient.id,
+    );
     setSessionId(s.id);
+  }
+
+  async function handleCreatePatientInline(full_label: string): Promise<Patient> {
+    const p = await api.patients.create({ full_label });
+    queryClient.invalidateQueries({ queryKey: ["patients"] });
+    return p;
   }
 
   function handleStartRecording() {
@@ -103,18 +140,19 @@ export function WorkspacePage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>New session</CardTitle>
-            <CardDescription>Enter a non-PHI label, then start recording.</CardDescription>
+            <CardDescription>
+              Pick the patient (or create a new one), add an optional chief
+              complaint, then start recording.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateSession} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="label">Patient label</Label>
-                <Input
-                  id="label"
-                  value={patientLabel}
-                  onChange={(e) => setPatientLabel(e.target.value)}
-                  placeholder="e.g., Patient #1"
-                  required
+                <Label>Patient</Label>
+                <PatientPicker
+                  selected={pickedPatient}
+                  onSelect={(p) => setPickedPatient(p)}
+                  onCreate={handleCreatePatientInline}
                 />
               </div>
               <div className="space-y-1.5">
@@ -130,7 +168,7 @@ export function WorkspacePage() {
                 <Button type="button" variant="ghost" onClick={() => navigate("/")}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={!patientLabel.trim()}>
+                <Button type="submit" disabled={!pickedPatient}>
                   Create session
                 </Button>
               </div>
@@ -154,7 +192,7 @@ export function WorkspacePage() {
   return (
     <div className="space-y-4">
       <PatientHeader
-        patientLabel={patientLabel || `Patient #${sessionId}`}
+        patientLabel={displayLabel || `Patient #${sessionId}`}
         chiefComplaint={chiefComplaint || null}
         isRecording={recorder.isRecording}
         duration={recorder.duration}

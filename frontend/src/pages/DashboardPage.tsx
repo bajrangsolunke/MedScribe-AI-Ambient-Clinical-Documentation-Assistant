@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { User as UserIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -322,8 +323,25 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
             />
           )}
         </div>
-        <div className="truncate text-xs text-slate-500">
-          {session.chief_complaint || "No chief complaint"}
+        <div className="flex items-center gap-2 truncate text-xs text-slate-500">
+          <span className="truncate">
+            {session.chief_complaint || "No chief complaint"}
+          </span>
+          {session.patient_id ? (
+            <Link
+              to={`/patients/${session.patient_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-0.5 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 hover:bg-sky-100"
+              title="Open patient"
+            >
+              <UserIcon className="h-3 w-3" />
+              {session.patient_label}
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+              Walk-in
+            </span>
+          )}
         </div>
         {meta.length > 0 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">

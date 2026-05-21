@@ -4,6 +4,8 @@ import { AppShell } from "@/components/AppShell";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { PatientDetailPage } from "@/pages/PatientDetailPage";
+import { PatientsPage } from "@/pages/PatientsPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { SessionDetailPage } from "@/pages/SessionDetailPage";
 import { WorkspacePage } from "@/pages/WorkspacePage";
@@ -19,6 +21,26 @@ export function AppRoutes() {
           <ProtectedRoute>
             <AppShell>
               <DashboardPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <PatientsPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patients/:id"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <PatientDetailPage />
             </AppShell>
           </ProtectedRoute>
         }

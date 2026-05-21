@@ -1,5 +1,9 @@
 import type {
   IcdSuggestion,
+  Patient,
+  PatientCreate,
+  PatientDetail,
+  PatientUpdate,
   SessionDetail,
   SessionSummary,
   SoapPayload,
@@ -75,11 +79,38 @@ export const api = {
         body: JSON.stringify({ id_token: idToken }),
       }),
   },
+  patients: {
+    list: (q?: string) => {
+      const qs = q && q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+      return request<Patient[]>(`/patients${qs}`);
+    },
+    create: (payload: PatientCreate) =>
+      request<Patient>("/patients", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    get: (id: number) => request<PatientDetail>(`/patients/${id}`),
+    update: (id: number, patch: PatientUpdate) =>
+      request<Patient>(`/patients/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+    delete: (id: number) =>
+      request<void>(`/patients/${id}`, { method: "DELETE" }),
+  },
   sessions: {
-    create: (patient_label: string, chief_complaint?: string) =>
+    create: (
+      patient_label: string,
+      chief_complaint?: string,
+      patient_id?: number | null,
+    ) =>
       request<SessionSummary>("/sessions", {
         method: "POST",
-        body: JSON.stringify({ patient_label, chief_complaint: chief_complaint ?? null }),
+        body: JSON.stringify({
+          patient_label,
+          chief_complaint: chief_complaint ?? null,
+          patient_id: patient_id ?? null,
+        }),
       }),
     list: () => request<SessionSummary[]>("/sessions"),
     get: (id: number) => request<SessionDetail>(`/sessions/${id}`),
