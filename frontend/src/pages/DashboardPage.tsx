@@ -18,6 +18,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 
+import { Pagination } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +30,6 @@ import {
   computeStats,
   formatDuration,
   formatTranscriptLen,
-  groupByTime,
   patientInitials,
   relativeTime,
   statusCanRetry,
@@ -68,11 +68,15 @@ function statusBadge(status: SessionStatus) {
   );
 }
 
+const DEFAULT_PAGE_SIZE = 10;
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const sessionsQuery = useQuery({
     queryKey: ["sessions"],
@@ -111,7 +115,16 @@ export function DashboardPage() {
     return out;
   }, [sessions, filter, query]);
 
-  const grouped = useMemo(() => groupByTime(filtered), [filtered]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  if (safePage !== page) {
+    setPage(safePage);
+  }
+
+  const pageItems = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize],
+  );
 
   function handleDelete(s: SessionSummary) {
     if (window.confirm(`Delete session "${s.patient_label}"? This cannot be undone.`)) {
@@ -219,32 +232,29 @@ export function DashboardPage() {
               No sessions match your search or filter.
             </div>
           ) : (
-            <div className="space-y-5">
-              {grouped.map((group) => (
-                <div key={group.bucket}>
-                  <div className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {group.bucket}
-                    <span className="text-slate-300">·</span>
-                    <span className="font-normal lowercase tracking-normal text-slate-400">
-                      {group.sessions.length} session{group.sessions.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-                    <ul className="divide-y divide-slate-100">
-                      {group.sessions.map((s) => (
-                        <SessionRow
-                          key={s.id}
-                          session={s}
-                          onOpen={() => navigate(`/sessions/${s.id}`)}
-                          onDelete={() => handleDelete(s)}
-                          onRetry={() => handleRetry(s)}
-                          isDeleting={deleteMutation.variables === s.id && deleteMutation.isPending}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+              <ul className="divide-y divide-slate-100">
+                {pageItems.map((s) => (
+                  <SessionRow
+                    key={s.id}
+                    session={s}
+                    onOpen={() => navigate(`/sessions/${s.id}`)}
+                    onDelete={() => handleDelete(s)}
+                    onRetry={() => handleRetry(s)}
+                    isDeleting={deleteMutation.variables === s.id && deleteMutation.isPending}
+                  />
+                ))}
+              </ul>
+              <Pagination
+                total={filtered.length}
+                page={safePage}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setPage(1);
+                }}
+              />
             </div>
           )}
         </CardContent>

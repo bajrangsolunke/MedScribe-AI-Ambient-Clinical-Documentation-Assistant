@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Stethoscope, UserPlus } from "lucide-react";
+import { Pencil, Plus, Search, Stethoscope, Trash2, UserPlus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { avatarColor, patientInitials } from "@/lib/sessions";
 import { ageFromDob } from "@/lib/patients";
 import { cn } from "@/lib/utils";
-import { api } from "@/services/api";
+import { ApiError, api } from "@/services/api";
 import type { Patient } from "@/types";
+
+const DEFAULT_PAGE_SIZE = 10;
 
 export function PatientsPage() {
   const navigate = useNavigate();
@@ -21,6 +24,9 @@ export function PatientsPage() {
   const [newLabel, setNewLabel] = useState("");
   const [newDob, setNewDob] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const patientsQuery = useQuery({
     queryKey: ["patients", "all"],
@@ -44,6 +50,21 @@ export function PatientsPage() {
     },
   });
 
+  const remove = useMutation({
+    mutationFn: (id: number) => api.patients.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      setActionError(null);
+    },
+    onError: (err) => {
+      setActionError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not delete patient",
+      );
+    },
+  });
+
   const patients: Patient[] = useMemo(
     () => patientsQuery.data ?? [],
     [patientsQuery.data],
@@ -55,10 +76,38 @@ export function PatientsPage() {
     return patients.filter((p) => p.full_label.toLowerCase().includes(q));
   }, [patients, query]);
 
+  // Clamp the current page if the visible result set shrinks below it
+  // (e.g. user searches and the filtered list is now shorter than where
+  // they were paged to). Adapt-to-prop pattern — clamp during render
+  // rather than in useEffect.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  if (safePage !== page) {
+    setPage(safePage);
+  }
+
+  const pageItems = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize],
+  );
+
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     if (!newLabel.trim()) return;
     create.mutate();
+  }
+
+  function handleEdit(p: Patient) {
+    navigate(`/patients/${p.id}?edit=1`);
+  }
+
+  function handleDelete(p: Patient) {
+    const ok = window.confirm(
+      `Delete patient "${p.full_label}"? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setActionError(null);
+    remove.mutate(p.id);
   }
 
   return (
@@ -132,7 +181,7 @@ export function PatientsPage() {
       )}
 
       <Card>
-        <CardContent className="space-y-4 p-4">
+        <CardContent className="space-y-3 p-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -142,6 +191,12 @@ export function PatientsPage() {
               className="pl-8"
             />
           </div>
+
+          {actionError && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {actionError}
+            </div>
+          )}
 
           {patientsQuery.isLoading ? (
             <p className="text-sm text-slate-500">Loading…</p>
@@ -169,29 +224,44 @@ export function PatientsPage() {
               No patients match your search.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border border-slate-200">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Patient</th>
-                    <th className="px-4 py-3 font-medium">Age</th>
-                    <th className="px-4 py-3 font-medium">Visits</th>
-                    <th className="px-4 py-3 font-medium">Last visit</th>
-                    <th className="px-4 py-3 font-medium">Notes</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered.map((p) => (
-                    <PatientRow
-                      key={p.id}
-                      patient={p}
-                      onOpen={() => navigate(`/patients/${p.id}`)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="overflow-hidden rounded-md border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Patient</th>
+                      <th className="w-16 px-3 py-2 font-medium">Age</th>
+                      <th className="w-20 px-3 py-2 font-medium">Visits</th>
+                      <th className="w-28 px-3 py-2 font-medium">Last visit</th>
+                      <th className="px-3 py-2 font-medium">Notes</th>
+                      <th className="w-28 px-3 py-2 text-right font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pageItems.map((p) => (
+                      <PatientRow
+                        key={p.id}
+                        patient={p}
+                        onOpen={() => navigate(`/patients/${p.id}`)}
+                        onEdit={() => handleEdit(p)}
+                        onDelete={() => handleDelete(p)}
+                        isDeleting={remove.isPending && remove.variables === p.id}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+                <Pagination
+                  total={filtered.length}
+                  page={safePage}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -199,7 +269,15 @@ export function PatientsPage() {
   );
 }
 
-function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void }) {
+interface PatientRowProps {
+  patient: Patient;
+  onOpen: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function PatientRow({ patient, onOpen, onEdit, onDelete, isDeleting }: PatientRowProps) {
   const age = ageFromDob(patient.date_of_birth);
   return (
     <tr
@@ -212,13 +290,16 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
           onOpen();
         }
       }}
-      className="h-14 cursor-pointer transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
+      className={cn(
+        "h-11 cursor-pointer transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none",
+        isDeleting && "opacity-50",
+      )}
     >
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
+      <td className="px-3 py-1.5">
+        <div className="flex items-center gap-2.5">
           <span
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
               avatarColor(patient.full_label),
             )}
             aria-hidden
@@ -228,9 +309,9 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
           <span className="truncate font-medium text-slate-900">{patient.full_label}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-slate-600">{age !== null ? age : "—"}</td>
-      <td className="px-4 py-3 text-slate-600">{patient.visit_count}</td>
-      <td className="px-4 py-3 text-slate-600">
+      <td className="px-3 py-1.5 text-slate-600">{age !== null ? age : "—"}</td>
+      <td className="px-3 py-1.5 text-slate-600">{patient.visit_count}</td>
+      <td className="px-3 py-1.5 text-slate-600">
         {patient.last_visit_at ? (
           <span title={new Date(patient.last_visit_at).toLocaleString()}>
             {new Date(patient.last_visit_at).toLocaleDateString()}
@@ -239,15 +320,31 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
           <span className="text-slate-400">—</span>
         )}
       </td>
-      <td className="max-w-xs truncate px-4 py-3 text-slate-500">
+      <td className="max-w-xs truncate px-3 py-1.5 text-slate-500">
         {patient.notes || <span className="text-slate-300">—</span>}
       </td>
-      <td className="px-4 py-3 text-right">
-        <span className="text-sm font-medium text-slate-900 hover:underline">
-          Open →
-        </span>
+      <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            title="Edit patient"
+            aria-label="Edit patient"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-600"
+            title="Delete patient"
+            aria-label="Delete patient"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </td>
     </tr>
   );
 }
-

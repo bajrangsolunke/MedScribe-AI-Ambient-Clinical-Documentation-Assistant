@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Mic, Pencil, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export function PatientDetailPage() {
   const id = params.id ? Number(params.id) : NaN;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState("");
   const [dob, setDob] = useState("");
@@ -40,6 +41,21 @@ export function PatientDetailPage() {
     queryFn: () => api.patients.get(id),
     enabled: !Number.isNaN(id),
   });
+
+  // Auto-enter edit mode if the URL has ?edit=1 (e.g. from the
+  // PatientsPage Edit button). Adapt-to-prop pattern: trigger once
+  // when data lands, then strip the param so a refresh doesn't redo it.
+  const [editTriggered, setEditTriggered] = useState(false);
+  if (data && searchParams.get("edit") === "1" && !editTriggered) {
+    setEditTriggered(true);
+    setLabel(data.full_label);
+    setDob(data.date_of_birth ?? "");
+    setNotes(data.notes ?? "");
+    setEditing(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  }
 
   const update = useMutation({
     mutationFn: () =>
