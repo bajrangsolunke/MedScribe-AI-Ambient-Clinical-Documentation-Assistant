@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Vite reads .env (and variants) at build/dev time — never commit them.
+# .env.example IS tracked and serves as the template.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
