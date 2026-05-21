@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
@@ -9,32 +10,60 @@ interface DropdownMenuProps {
 }
 
 /**
- * Minimal click-to-toggle dropdown with click-outside dismissal.
- * Avoids pulling in @radix-ui just for one menu.
+ * Click-to-toggle dropdown rendered via a portal so it escapes any
+ * parent `overflow-hidden` or stacking-context clipping. Menu is
+ * absolutely positioned in viewport coordinates based on the trigger's
+ * bounding rect. Dismisses on outside click, Escape, or window resize.
  */
 export function DropdownMenu({ trigger, children, align = "right" }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  const computeCoords = useCallback(() => {
+    const tr = triggerRef.current?.getBoundingClientRect();
+    const m = menuRef.current?.getBoundingClientRect();
+    if (!tr) return;
+    const menuWidth = m?.width ?? 160;
+    const top = tr.bottom + 4;
+    const left = align === "right" ? tr.right - menuWidth : tr.left;
+    setCoords({ top, left });
+  }, [align]);
+
+  useLayoutEffect(() => {
+    if (open) computeCoords();
+  }, [open, computeCoords]);
 
   useEffect(() => {
     if (!open) return;
     function onDown(e: MouseEvent) {
-      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+      if (triggerRef.current?.contains(e.target as Node)) return;
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
     }
-    function onEscape(e: KeyboardEvent) {
+    function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
+    function onResize() {
+      computeCoords();
+    }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onEscape);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onEscape);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
     };
-  }, [open]);
+  }, [open, computeCoords]);
 
   return (
-    <div ref={containerRef} className="relative inline-block">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={(e) => {
           e.stopPropagation();
@@ -46,22 +75,28 @@ export function DropdownMenu({ trigger, children, align = "right" }: DropdownMen
       >
         {trigger}
       </button>
-      {open && (
-        <div
-          role="menu"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen(false);
-          }}
-          className={cn(
-            "absolute top-full z-20 mt-1 min-w-[160px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg",
-            align === "right" ? "right-0" : "left-0",
-          )}
-        >
-          {children}
-        </div>
-      )}
-    </div>
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
+            style={{
+              position: "fixed",
+              top: coords?.top ?? -9999,
+              left: coords?.left ?? -9999,
+              visibility: coords ? "visible" : "hidden",
+            }}
+            className="z-50 min-w-[160px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
+          >
+            {children}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
 
