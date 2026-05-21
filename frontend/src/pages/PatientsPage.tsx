@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Stethoscope, UserPlus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { avatarColor, patientInitials, relativeTime } from "@/lib/sessions";
+import { avatarColor, patientInitials } from "@/lib/sessions";
 import { ageFromDob } from "@/lib/patients";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
@@ -169,14 +169,28 @@ export function PatientsPage() {
               No patients match your search.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
-                <PatientCard
-                  key={p.id}
-                  patient={p}
-                  onOpen={() => navigate(`/patients/${p.id}`)}
-                />
-              ))}
+            <div className="overflow-hidden rounded-md border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Patient</th>
+                    <th className="px-4 py-3 font-medium">Age</th>
+                    <th className="px-4 py-3 font-medium">Visits</th>
+                    <th className="px-4 py-3 font-medium">Last visit</th>
+                    <th className="px-4 py-3 font-medium">Notes</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((p) => (
+                    <PatientRow
+                      key={p.id}
+                      patient={p}
+                      onOpen={() => navigate(`/patients/${p.id}`)}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
@@ -185,53 +199,55 @@ export function PatientsPage() {
   );
 }
 
-function PatientCard({
-  patient,
-  onOpen,
-}: {
-  patient: Patient;
-  onOpen: () => void;
-}) {
+function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void }) {
   const age = ageFromDob(patient.date_of_birth);
   return (
-    <button
-      type="button"
+    <tr
       onClick={onOpen}
-      className="group flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-400"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="h-14 cursor-pointer transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
     >
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold",
-            avatarColor(patient.full_label),
-          )}
-        >
-          {patientInitials(patient.full_label)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-slate-900">
-            {patient.full_label}
-          </div>
-          <div className="truncate text-xs text-slate-500">
-            {age !== null && <>Age {age} · </>}
-            {patient.visit_count} visit{patient.visit_count === 1 ? "" : "s"}
-          </div>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+              avatarColor(patient.full_label),
+            )}
+            aria-hidden
+          >
+            {patientInitials(patient.full_label)}
+          </span>
+          <span className="truncate font-medium text-slate-900">{patient.full_label}</span>
         </div>
-      </div>
-      <div className="text-xs text-slate-500">
-        {patient.last_visit_at
-          ? `Last visit ${relativeTime(patient.last_visit_at)}`
-          : "No visits yet"}
-      </div>
-      {patient.notes && (
-        <Link
-          to="#"
-          onClick={(e) => e.preventDefault()}
-          className="line-clamp-2 text-xs italic text-slate-400"
-        >
-          {patient.notes}
-        </Link>
-      )}
-    </button>
+      </td>
+      <td className="px-4 py-3 text-slate-600">{age !== null ? age : "—"}</td>
+      <td className="px-4 py-3 text-slate-600">{patient.visit_count}</td>
+      <td className="px-4 py-3 text-slate-600">
+        {patient.last_visit_at ? (
+          <span title={new Date(patient.last_visit_at).toLocaleString()}>
+            {new Date(patient.last_visit_at).toLocaleDateString()}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+      <td className="max-w-xs truncate px-4 py-3 text-slate-500">
+        {patient.notes || <span className="text-slate-300">—</span>}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <span className="text-sm font-medium text-slate-900 hover:underline">
+          Open →
+        </span>
+      </td>
+    </tr>
   );
 }
+
