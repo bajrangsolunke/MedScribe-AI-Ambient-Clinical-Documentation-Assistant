@@ -12,6 +12,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Response,
     UploadFile,
     status,
 )
@@ -150,6 +151,57 @@ def finalize_session(
         )
     background.add_task(_run_finalize_in_thread, session_id)
     return {"status": "accepted"}
+
+
+@router.post("/{session_id}/retry-finalize", status_code=status.HTTP_202_ACCEPTED)
+def retry_finalize(
+    session_id: int,
+    background: BackgroundTasks,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Re-run the finalize pipeline on a failed session.
+
+    Clears any partial SOAP / ICD rows so the new run starts clean.
+    Requires status=failed and a non-empty transcript.
+    """
+    s = _get_owned_session(session_id, user, db)
+    if s.status != SessionStatus.failed:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot retry: session status is {s.status.value} (need 'failed')",
+        )
+    if not s.transcript_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot retry: transcript is empty (delete and re-record instead)",
+        )
+
+    # Wipe partial outputs so the re-run starts from a clean slate.
+    if s.soap_note is not None:
+        db.delete(s.soap_note)
+    for icd in list(s.icd_suggestions):
+        db.delete(icd)
+    s.visit_summary = None
+    s.error_message = None
+    s.status = SessionStatus.recording  # finalize endpoint expects this
+    db.commit()
+
+    background.add_task(_run_finalize_in_thread, session_id)
+    return {"status": "accepted"}
+
+
+@router.delete("/{session_id}")
+def delete_session(
+    session_id: int,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    s = _get_owned_session(session_id, user, db)
+    db.delete(s)  # cascade clears soap_note, icd_suggestions, transcripts
+    db.commit()
+    event_bus.drop(session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{session_id}/stream")

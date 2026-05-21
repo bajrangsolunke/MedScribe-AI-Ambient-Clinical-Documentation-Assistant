@@ -93,6 +93,13 @@ export const api = {
         method: "POST",
         body: JSON.stringify({}),
       }),
+    retryFinalize: (id: number) =>
+      request<{ status: string }>(`/sessions/${id}/retry-finalize`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      }),
+    delete: (id: number) =>
+      request<void>(`/sessions/${id}`, { method: "DELETE" }),
     updateSoap: (id: number, soap: Omit<SoapPayload, "edited_at">) =>
       request<SessionDetail>(`/sessions/${id}/soap`, {
         method: "PATCH",

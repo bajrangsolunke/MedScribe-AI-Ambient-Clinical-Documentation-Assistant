@@ -1,5 +1,6 @@
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session as DbSession
 
@@ -164,6 +165,90 @@ def test_list_sessions_returns_user_sessions_only(client: TestClient) -> None:
     body = listed.json()
     assert len(body) == 2
     assert {b["patient_label"] for b in body} == {"Patient A", "Patient B"}
+
+
+def test_delete_session_removes_it_and_children(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/sessions", json={"patient_label": "P"}, headers=auth).json()["id"]
+    _upload_chunk(client, token, sid, 0)
+    client.post(f"/sessions/{sid}/finalize", headers=auth)
+
+    # Sanity: it's there
+    assert client.get(f"/sessions/{sid}", headers=auth).status_code == 200
+
+    deleted = client.delete(f"/sessions/{sid}", headers=auth)
+    assert deleted.status_code == 204
+    assert client.get(f"/sessions/{sid}", headers=auth).status_code == 404
+
+
+def test_delete_session_404_for_other_user(client: TestClient) -> None:
+    a_token = _register_and_token(client, "a@example.com")
+    a_sid = client.post(
+        "/sessions",
+        json={"patient_label": "X"},
+        headers={"Authorization": f"Bearer {a_token}"},
+    ).json()["id"]
+    b_token = _register_and_token(client, "b@example.com")
+    resp = client.delete(
+        f"/sessions/{a_sid}", headers={"Authorization": f"Bearer {b_token}"}
+    )
+    assert resp.status_code == 404
+
+
+def test_retry_finalize_on_failed_session(
+    client: TestClient,
+    db_session: DbSession,
+    monkeypatch: pytest.MonkeyPatch,
+    mock_groq: dict[str, Any],
+) -> None:
+    """Force the first finalize to fail, then retry — should succeed cleanly."""
+    from app.ai import llm
+
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/sessions", json={"patient_label": "P"}, headers=auth).json()["id"]
+    _upload_chunk(client, token, sid, 0)
+
+    # First finalize: LLM blows up
+    calls = {"n": 0}
+    original_complete_json = llm.complete_json
+
+    def fail_once(*args: object, **kwargs: object) -> object:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("first run boom")
+        return original_complete_json(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("app.ai.llm.complete_json", fail_once)
+    client.post(f"/sessions/{sid}/finalize", headers=auth)
+
+    detail = client.get(f"/sessions/{sid}", headers=auth).json()
+    assert detail["status"] == "failed"
+
+    # Retry — should succeed this time
+    retry = client.post(f"/sessions/{sid}/retry-finalize", headers=auth)
+    assert retry.status_code == 202, retry.text
+
+    detail = client.get(f"/sessions/{sid}", headers=auth).json()
+    assert detail["status"] == "completed"
+    assert detail["soap_note"] is not None
+    assert detail["error_message"] is None
+
+
+def test_retry_finalize_409_when_not_failed(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/sessions", json={"patient_label": "P"}, headers=auth).json()["id"]
+    # status is `created`, not `failed`
+    resp = client.post(f"/sessions/{sid}/retry-finalize", headers=auth)
+    assert resp.status_code == 409
 
 
 def test_get_session_404_for_other_user(client: TestClient) -> None:
