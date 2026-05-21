@@ -29,7 +29,12 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
   }
 
   return (
-    <div className="flex justify-center">
+    // The GoogleLogin button is an iframe — its inner styles are owned by
+    // Google for brand-compliance. We can only choose its variant. We pick
+    // filled_black to match the slate-900 brand colour, rectangular shape,
+    // size large, and width-match the form inputs (320px) so it sits
+    // visually flush with the email/password fields below.
+    <div className="flex justify-center [&>div]:!w-full [&_iframe]:!w-full [&_iframe]:!rounded-md">
       <GoogleLogin
         onSuccess={async (cred) => {
           if (!cred.credential) {
@@ -45,10 +50,11 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
         }}
         onError={() => onError("Google sign-in was cancelled or failed")}
         useOneTap={false}
-        theme="outline"
+        theme="filled_black"
         size="large"
         text="continue_with"
         shape="rectangular"
+        width="320"
       />
     </div>
   );
