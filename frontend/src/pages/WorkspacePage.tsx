@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Download } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -18,6 +18,18 @@ import { useRecorder } from "@/hooks/useRecorder";
 import { useStreamingSession } from "@/hooks/useStreamingSession";
 import { api } from "@/services/api";
 import type { SoapPayload } from "@/types";
+
+async function downloadSessionPdf(id: number): Promise<void> {
+  const blob = await api.sessions.exportPdf(id);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `medscribe-session-${id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 export function WorkspacePage() {
   const navigate = useNavigate();
@@ -218,8 +230,14 @@ export function WorkspacePage() {
       </div>
 
       {streaming.phase === "completed" && (
-        <div className="flex justify-end">
-          <Button onClick={() => navigate(`/sessions/${sessionId}`)}>View / download PDF →</Button>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => navigate(`/sessions/${sessionId}`)}>
+            Open in session view →
+          </Button>
+          <Button onClick={() => sessionId !== null && void downloadSessionPdf(sessionId)}>
+            <Download className="h-4 w-4" />
+            Save &amp; Download PDF
+          </Button>
         </div>
       )}
     </div>
