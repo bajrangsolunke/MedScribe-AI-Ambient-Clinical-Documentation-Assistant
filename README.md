@@ -8,9 +8,12 @@
 
 ## Demo
 
-> Record a 2–3 minute walkthrough using [`docs/demo/recording-script.md`](docs/demo/recording-script.md) and link it here.
+▶ **2-minute walkthrough — coming soon.** Watch a clinician record a chest-pain consultation, see the transcript build live in the browser, and the SOAP note + validated ICD-10 codes populate within seconds. PDF export at the end.
 
-[![MedScribe AI demo](docs/demo/thumbnail.png)](REPLACE_WITH_DEMO_VIDEO_URL)
+<!-- Once recorded, replace this section with:
+[![MedScribe AI — 2-minute walkthrough](docs/demo/thumbnail.png)](https://your-video-url)
+-->
+
 
 ## What it does
 
@@ -150,10 +153,9 @@ docs/
     specs/           design specs — one per sub-project, brainstormed then frozen
     plans/           lightweight implementation checklists derived from each spec
   demo/
-    recording-script.md  — 60-second script to read for the demo video
     portfolio-onepager.html — recruiter-facing case study (print/PDF friendly)
-    linkedin-post.md      — two post variants ready to publish
-    demo-script.md        — 3 longer scenarios for varied testing
+    demo-script.md         — 3 synthetic patient scenarios for testing
+    recording-script.md    — 60-second script used for the demo video
 ```
 
 ## ICD-10 catalog
