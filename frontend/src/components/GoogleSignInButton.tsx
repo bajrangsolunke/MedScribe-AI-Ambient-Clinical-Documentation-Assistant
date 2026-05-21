@@ -29,12 +29,22 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
   }
 
   return (
-    // The GoogleLogin button is an iframe — its inner styles are owned by
-    // Google for brand-compliance. We can only choose its variant. We pick
-    // filled_black to match the slate-900 brand colour, rectangular shape,
-    // size large, and width-match the form inputs (320px) so it sits
-    // visually flush with the email/password fields below.
-    <div className="flex justify-center [&>div]:!w-full [&_iframe]:!w-full [&_iframe]:!rounded-md">
+    // The GoogleLogin button is an iframe — its interior is owned by Google
+    // for brand-compliance (we can only choose its variant). Google's
+    // library caps width at ~400px even when "100%" is requested, so we
+    // pass the largest allowed value and use CSS to stretch the wrapper
+    // div and the iframe itself to fill the parent, matching the width
+    // of the email/password inputs below.
+    <div
+      className={
+        "w-full " +
+        "[&>div]:!w-full " +
+        "[&>div]:!max-w-none " +
+        "[&_iframe]:!w-full " +
+        "[&_iframe]:!min-w-0 " +
+        "[&_iframe]:!rounded-md"
+      }
+    >
       <GoogleLogin
         onSuccess={async (cred) => {
           if (!cred.credential) {
@@ -54,7 +64,7 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
         size="large"
         text="continue_with"
         shape="rectangular"
-        width="320"
+        width="400"
       />
     </div>
   );
