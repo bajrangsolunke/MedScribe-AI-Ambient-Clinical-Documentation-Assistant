@@ -1,4 +1,4 @@
-import { LogOut, Stethoscope } from "lucide-react";
+import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -7,6 +7,27 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
   children: ReactNode;
+}
+
+/** Same ECG waveform as the favicon — brand consistency. */
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className={className}
+      role="img"
+      aria-label="MedScribe AI"
+    >
+      <path
+        d="M8 36 L18 36 L22 26 L30 46 L38 18 L42 36 L56 36"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function AppShell({ children }: Props) {
@@ -23,7 +44,7 @@ export function AppShell({ children }: Props) {
       <header className="border-b border-slate-200 bg-slate-900 text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           <Link to="/" className="flex items-center gap-2 font-semibold">
-            <Stethoscope className="h-5 w-5 text-sky-300" />
+            <BrandMark className="h-5 w-5 text-sky-300" />
             <span>MedScribe AI</span>
           </Link>
           {user && (
