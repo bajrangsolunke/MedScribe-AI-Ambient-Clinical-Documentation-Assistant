@@ -26,6 +26,11 @@ class ConsultSession(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    # Nullable FK so existing sessions from #1/#2 stay valid; new sessions
+    # link to a Patient via the workspace picker.
+    patient_id: Mapped[int | None] = mapped_column(
+        ForeignKey("patients.id"), nullable=True, index=True
+    )
     patient_label: Mapped[str] = mapped_column(String(120), nullable=False)
     chief_complaint: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[SessionStatus] = mapped_column(
@@ -40,6 +45,7 @@ class ConsultSession(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="sessions")  # noqa: F821
+    patient: Mapped["Patient | None"] = relationship(back_populates="sessions")  # noqa: F821
     soap_note: Mapped["SoapNote | None"] = relationship(  # noqa: F821
         back_populates="session", cascade="all, delete-orphan", uselist=False
     )
