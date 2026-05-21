@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,15 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const redirectAfterAuth = () => navigate("/", { replace: true });
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
       await register(email, password);
-      navigate("/", { replace: true });
+      redirectAfterAuth();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed");
     } finally {
@@ -38,6 +41,14 @@ export function RegisterPage() {
           <CardDescription>Start documenting visits with MedScribe AI</CardDescription>
         </CardHeader>
         <CardContent>
+          <GoogleSignInButton onSuccess={redirectAfterAuth} onError={setError} />
+
+          <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            or
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>

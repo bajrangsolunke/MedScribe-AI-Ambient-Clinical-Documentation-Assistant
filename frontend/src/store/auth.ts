@@ -12,6 +12,7 @@ interface AuthState {
   hydrate: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -64,6 +65,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (email, password) => {
     const resp = await api.auth.register(email, password);
+    setAuthToken(resp.access_token);
+    writeStored(resp.access_token, resp.user);
+    set({ token: resp.access_token, user: resp.user });
+  },
+
+  loginWithGoogle: async (idToken) => {
+    const resp = await api.auth.google(idToken);
     setAuthToken(resp.access_token);
     writeStored(resp.access_token, resp.user);
     set({ token: resp.access_token, user: resp.user });
