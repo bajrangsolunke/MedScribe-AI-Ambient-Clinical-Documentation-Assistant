@@ -9,6 +9,9 @@ from app.schemas.icd import IcdSuggestionOut
 class SessionCreate(BaseModel):
     patient_label: str
     chief_complaint: str | None = None
+    # Optional FK to an existing Patient. If provided, server verifies
+    # ownership and links; if omitted, the session is a "walk-in".
+    patient_id: int | None = None
 
 
 class SessionOut(BaseModel):
@@ -20,6 +23,8 @@ class SessionOut(BaseModel):
     started_at: datetime
     completed_at: datetime | None
     error_message: str | None
+    # Patient linkage (null for legacy or walk-in sessions).
+    patient_id: int | None = None
     # Derived fields surfaced on the list endpoint so the dashboard can
     # show info-dense cards without N+1 detail fetches.
     icd_count: int = 0

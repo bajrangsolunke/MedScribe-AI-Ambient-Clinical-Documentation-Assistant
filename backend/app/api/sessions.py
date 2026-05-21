@@ -23,7 +23,15 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, get_db
 from app.deps import get_current_user, get_current_user_eventsource
-from app.models import ConsultSession, IcdCatalog, IcdSuggestion, SessionStatus, SoapNote, User
+from app.models import (
+    ConsultSession,
+    IcdCatalog,
+    IcdSuggestion,
+    Patient,
+    SessionStatus,
+    SoapNote,
+    User,
+)
 from app.schemas.session import (
     IcdUpdate,
     SessionCreate,
@@ -64,6 +72,7 @@ def _serialize_session(s: ConsultSession) -> dict[str, Any]:
         "started_at": s.started_at,
         "completed_at": s.completed_at,
         "error_message": s.error_message,
+        "patient_id": s.patient_id,
         "icd_count": len(s.icd_suggestions),
         "has_soap": s.soap_note is not None,
         "transcript_chars": len(s.transcript_text or ""),
@@ -86,8 +95,16 @@ def create_session(
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    # If the client supplies a patient_id, verify ownership before linking.
+    # Cross-user (or non-existent) IDs return 404 so we don't leak existence.
+    if payload.patient_id is not None:
+        patient = db.get(Patient, payload.patient_id)
+        if patient is None or patient.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
     s = ConsultSession(
         user_id=user.id,
+        patient_id=payload.patient_id,
         patient_label=payload.patient_label,
         chief_complaint=payload.chief_complaint,
     )
