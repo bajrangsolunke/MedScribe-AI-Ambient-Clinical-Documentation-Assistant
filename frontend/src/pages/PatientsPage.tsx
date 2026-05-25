@@ -3,6 +3,9 @@ import { Pencil, Plus, Search, Stethoscope, Trash2, UserPlus } from "lucide-reac
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { toast } from "sonner";
+
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +30,7 @@ export function PatientsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Patient | null>(null);
 
   const patientsQuery = useQuery({
     queryKey: ["patients", "all"],
@@ -46,7 +50,11 @@ export function PatientsPage() {
       setNewLabel("");
       setNewDob("");
       setNewNotes("");
+      toast.success("Patient created");
       navigate(`/patients/${p.id}`);
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not create patient");
     },
   });
 
@@ -55,13 +63,15 @@ export function PatientsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
       setActionError(null);
+      toast.success("Patient deleted");
     },
     onError: (err) => {
-      setActionError(
-        err instanceof ApiError
-          ? err.message
-          : "Could not delete patient",
-      );
+      const message =
+        err instanceof ApiError ? err.message : "Could not delete patient";
+      // Backend returns 409 with a helpful "delete the visits first" message
+      // — keep the inline banner too for emphasis, but also show a toast.
+      setActionError(message);
+      toast.error(message);
     },
   });
 
@@ -102,12 +112,15 @@ export function PatientsPage() {
   }
 
   function handleDelete(p: Patient) {
-    const ok = window.confirm(
-      `Delete patient "${p.full_label}"? This cannot be undone.`,
-    );
-    if (!ok) return;
+    setPendingDelete(p);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
     setActionError(null);
-    remove.mutate(p.id);
+    remove.mutate(pendingDelete.id, {
+      onSettled: () => setPendingDelete(null),
+    });
   }
 
   return (
@@ -265,6 +278,21 @@ export function PatientsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={`Delete patient "${pendingDelete?.full_label ?? ""}"?`}
+        description={
+          pendingDelete && pendingDelete.visit_count > 0
+            ? `This patient has ${pendingDelete.visit_count} visit${pendingDelete.visit_count === 1 ? "" : "s"}. The server will refuse the delete — remove the visits first.`
+            : "This permanently removes the patient record. This cannot be undone."
+        }
+        confirmLabel="Delete patient"
+        variant="danger"
+        loading={remove.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

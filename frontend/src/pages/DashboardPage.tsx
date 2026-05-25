@@ -18,6 +18,9 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 
+import { toast } from "sonner";
+
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { Pagination } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,13 +90,27 @@ export function DashboardPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.sessions.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast.success("Session deleted");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not delete session");
+    },
   });
 
   const retryMutation = useMutation({
     mutationFn: (id: number) => api.sessions.retryFinalize(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast.success("Re-running pipeline…");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not retry session");
+    },
   });
+
+  const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
 
   const sessions: SessionSummary[] = useMemo(
     () => sessionsQuery.data ?? [],
@@ -127,9 +144,14 @@ export function DashboardPage() {
   );
 
   function handleDelete(s: SessionSummary) {
-    if (window.confirm(`Delete session "${s.patient_label}"? This cannot be undone.`)) {
-      deleteMutation.mutate(s.id);
-    }
+    setPendingDelete(s);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    deleteMutation.mutate(pendingDelete.id, {
+      onSettled: () => setPendingDelete(null),
+    });
   }
 
   function handleRetry(s: SessionSummary) {
@@ -259,6 +281,17 @@ export function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={`Delete session "${pendingDelete?.patient_label ?? ""}"?`}
+        description="This permanently removes the recording, SOAP note, and ICD suggestions. This cannot be undone."
+        confirmLabel="Delete session"
+        variant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
