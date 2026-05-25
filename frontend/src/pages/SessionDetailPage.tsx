@@ -36,6 +36,27 @@ export function SessionDetailPage() {
     onSuccess: (d) => queryClient.setQueryData(["session", id], d),
   });
 
+  const updateIcd = useMutation({
+    mutationFn: ({
+      icdId,
+      patch,
+    }: {
+      icdId: number;
+      patch: { code?: string; description?: string };
+    }) => api.sessions.updateIcd(id, icdId, patch),
+    onSuccess: (d) => queryClient.setQueryData(["session", id], d),
+  });
+
+  const deleteIcd = useMutation({
+    mutationFn: (icdId: number) => api.sessions.deleteIcd(id, icdId),
+    onSuccess: (d) => queryClient.setQueryData(["session", id], d),
+  });
+
+  const updateSummary = useMutation({
+    mutationFn: (summary: string) => api.sessions.updateSummary(id, summary),
+    onSuccess: (d) => queryClient.setQueryData(["session", id], d),
+  });
+
   async function handleDownload() {
     const blob = await api.sessions.exportPdf(id);
     const url = URL.createObjectURL(blob);
@@ -110,8 +131,16 @@ export function SessionDetailPage() {
             onSetAccepted={(icdId, accepted) =>
               setIcdAccepted.mutateAsync({ icdId, accepted }).then(() => undefined)
             }
+            onUpdate={(icdId, patch) =>
+              updateIcd.mutateAsync({ icdId, patch }).then(() => undefined)
+            }
+            onDelete={(icdId) => deleteIcd.mutateAsync(icdId).then(() => undefined)}
           />
-          <SummaryCard summary={data.visit_summary} />
+          <SummaryCard
+            summary={data.visit_summary}
+            editable={data.status === "completed"}
+            onSave={(next) => updateSummary.mutateAsync(next).then(() => undefined)}
+          />
         </div>
       </div>
     </div>

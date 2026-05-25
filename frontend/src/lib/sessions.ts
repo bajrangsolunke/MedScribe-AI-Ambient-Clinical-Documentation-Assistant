@@ -129,3 +129,26 @@ export function confidenceTone(c: number): {
   if (c >= 0.6) return { label: "medium", className: "bg-amber-100 text-amber-700" };
   return { label: "low", className: "bg-rose-100 text-rose-700" };
 }
+
+/**
+ * Returns a length-N array where entry i is the count of sessions whose
+ * `started_at` falls on the day that's (N-1-i) days before today. So index
+ * 0 is the oldest day in the window; the last entry is today.
+ *
+ * Used to drive the dashboard sparkline.
+ */
+export function dailyVisitCounts(sessions: SessionSummary[], days: number): number[] {
+  const counts = new Array(days).fill(0) as number[];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+  for (const s of sessions) {
+    const t = new Date(s.started_at);
+    t.setHours(0, 0, 0, 0);
+    const dayDelta = Math.round((todayMs - t.getTime()) / ONE_DAY_MS);
+    if (dayDelta >= 0 && dayDelta < days) {
+      counts[days - 1 - dayDelta]++;
+    }
+  }
+  return counts;
+}

@@ -1,8 +1,9 @@
-import { AlertTriangle, LogOut } from "lucide-react";
+import { AlertTriangle, LogOut, Moon, Search, Sun } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { avatarColor, patientInitials } from "@/lib/sessions";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ function BrandMark({ className }: { className?: string }) {
 
 export function AppShell({ children }: Props) {
   const { user, logout } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -47,16 +49,82 @@ export function AppShell({ children }: Props) {
     <div className="flex min-h-full flex-col">
       <header className="border-b border-slate-800 bg-slate-900 text-white shadow-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 text-base font-semibold tracking-tight"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sky-300">
-              <BrandMark className="h-5 w-5" />
-            </span>
-            <span>MedScribe AI</span>
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 text-base font-semibold tracking-tight"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-sky-300">
+                <BrandMark className="h-5 w-5" />
+              </span>
+              <span>MedScribe AI</span>
+            </Link>
+            {user && (
+              <nav className="hidden items-center gap-1 sm:flex">
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) =>
+                    cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )
+                  }
+                >
+                  Sessions
+                </NavLink>
+                <NavLink
+                  to="/patients"
+                  className={({ isActive }) =>
+                    cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-slate-800 text-white"
+                        : "text-slate-300 hover:bg-slate-800 hover:text-white",
+                    )
+                  }
+                >
+                  Patients
+                </NavLink>
+              </nav>
+            )}
+          </div>
           {user && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Trigger the global ⌘K listener. Dispatching the keyboard
+                  // event keeps the source of truth in CommandPalette.
+                  document.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                      key: "k",
+                      metaKey: true,
+                      ctrlKey: true,
+                      bubbles: true,
+                    }),
+                  );
+                }}
+                className="hidden items-center gap-2 rounded-md border border-slate-800 bg-slate-800/40 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800 hover:text-white sm:inline-flex"
+                title="Open command palette (⌘K / Ctrl+K)"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span>Quick search…</span>
+                <kbd className="ml-2 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+                  ⌘K
+                </kbd>
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label="Toggle theme"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -86,17 +154,17 @@ export function AppShell({ children }: Props) {
                   />
                   <div
                     role="menu"
-                    className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-lg"
+                    className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   >
-                    <div className="border-b border-slate-100 px-4 py-3">
+                    <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                       <div className="text-sm font-medium">{emailToName(user.email)}</div>
-                      <div className="truncate text-xs text-slate-500">{user.email}</div>
+                      <div className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</div>
                     </div>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout
@@ -105,10 +173,11 @@ export function AppShell({ children }: Props) {
                 </>
               )}
             </div>
+            </div>
           )}
         </div>
       </header>
-      <div className="flex items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs font-medium text-amber-800">
+      <div className="flex items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
         <AlertTriangle className="h-3.5 w-3.5" />
         <span>Demo environment — do not enter real patient information (PHI).</span>
       </div>

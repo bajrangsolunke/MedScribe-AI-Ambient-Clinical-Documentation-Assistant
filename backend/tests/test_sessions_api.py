@@ -311,3 +311,129 @@ def test_set_icd_accepted(
     )
     assert accepted.status_code == 200
     assert accepted.json()["icd_suggestions"][0]["accepted_by_user"] is True
+
+
+def _seeded_completed_session(
+    client: TestClient, db_session: DbSession, token: str
+) -> tuple[int, int]:
+    """Helper: returns (session_id, first_icd_id) for a completed session."""
+    auth = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/sessions", json={"patient_label": "P"}, headers=auth).json()["id"]
+    _upload_chunk(client, token, sid, 0)
+    client.post(f"/sessions/{sid}/finalize", headers=auth)
+    detail = client.get(f"/sessions/{sid}", headers=auth).json()
+    return sid, detail["icd_suggestions"][0]["id"]
+
+
+def test_update_icd_code_revalidates_against_catalog(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    """Doctor edits code to a real catalog entry: is_validated flips true,
+    description is auto-filled from the catalog."""
+    db_session.add(
+        IcdCatalog(
+            code="I10",
+            short_description="Essential (primary) hypertension",
+            long_description="Essential (primary) hypertension",
+            chapter="Diseases of the circulatory system",
+        )
+    )
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, icd_id = _seeded_completed_session(client, db_session, token)
+
+    resp = client.patch(
+        f"/sessions/{sid}/icd/{icd_id}",
+        json={"code": "I10"},
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    icd = next(i for i in resp.json()["icd_suggestions"] if i["id"] == icd_id)
+    assert icd["code"] == "I10"
+    assert icd["is_validated"] is True
+    assert icd["description"] == "Essential (primary) hypertension"
+
+
+def test_update_icd_to_unknown_code_marks_unverified(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, icd_id = _seeded_completed_session(client, db_session, token)
+
+    resp = client.patch(
+        f"/sessions/{sid}/icd/{icd_id}",
+        json={"code": "Z99.99"},  # not in seed catalog
+        headers=auth,
+    )
+    icd = next(i for i in resp.json()["icd_suggestions"] if i["id"] == icd_id)
+    assert icd["code"] == "Z99.99"
+    assert icd["is_validated"] is False
+
+
+def test_update_icd_description_only(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, icd_id = _seeded_completed_session(client, db_session, token)
+
+    resp = client.patch(
+        f"/sessions/{sid}/icd/{icd_id}",
+        json={"description": "Doctor's clinical note"},
+        headers=auth,
+    )
+    icd = next(i for i in resp.json()["icd_suggestions"] if i["id"] == icd_id)
+    assert icd["description"] == "Doctor's clinical note"
+    # Code untouched
+    assert icd["code"] == "R07.9"
+
+
+def test_update_icd_empty_code_400(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, icd_id = _seeded_completed_session(client, db_session, token)
+
+    resp = client.patch(
+        f"/sessions/{sid}/icd/{icd_id}",
+        json={"code": "   "},
+        headers=auth,
+    )
+    assert resp.status_code == 400
+
+
+def test_delete_icd(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, icd_id = _seeded_completed_session(client, db_session, token)
+
+    resp = client.delete(f"/sessions/{sid}/icd/{icd_id}", headers=auth)
+    assert resp.status_code == 200, resp.text
+    assert not any(i["id"] == icd_id for i in resp.json()["icd_suggestions"])
+
+
+def test_update_summary(
+    client: TestClient, db_session: DbSession, mock_groq: dict[str, Any]
+) -> None:
+    _seed_catalog(db_session)
+    token = _register_and_token(client)
+    auth = {"Authorization": f"Bearer {token}"}
+    sid, _ = _seeded_completed_session(client, db_session, token)
+
+    new_summary = "Patient given conservative management plan. Follow up in 1 week."
+    resp = client.patch(
+        f"/sessions/{sid}/summary",
+        json={"summary": new_summary},
+        headers=auth,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["visit_summary"] == new_summary

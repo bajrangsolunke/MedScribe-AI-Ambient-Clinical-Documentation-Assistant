@@ -17,18 +17,28 @@ from fastapi import (
     UploadFile,
     status,
 )
+from sqlalchemy import func
 from sqlalchemy.orm import Session as DbSession, selectinload
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import SessionLocal, get_db
 from app.deps import get_current_user, get_current_user_eventsource
-from app.models import ConsultSession, IcdSuggestion, SessionStatus, SoapNote, User
+from app.models import (
+    ConsultSession,
+    IcdCatalog,
+    IcdSuggestion,
+    Patient,
+    SessionStatus,
+    SoapNote,
+    User,
+)
 from app.schemas.session import (
-    IcdAcceptedUpdate,
+    IcdUpdate,
     SessionCreate,
     SessionDetail,
     SessionOut,
     SoapUpdate,
+    SummaryUpdate,
 )
 from app.schemas.transcript import ChunkUploadResponse
 from app.services.chunk_transcriber import transcribe_chunk
@@ -62,6 +72,7 @@ def _serialize_session(s: ConsultSession) -> dict[str, Any]:
         "started_at": s.started_at,
         "completed_at": s.completed_at,
         "error_message": s.error_message,
+        "patient_id": s.patient_id,
         "icd_count": len(s.icd_suggestions),
         "has_soap": s.soap_note is not None,
         "transcript_chars": len(s.transcript_text or ""),
@@ -84,8 +95,16 @@ def create_session(
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    # If the client supplies a patient_id, verify ownership before linking.
+    # Cross-user (or non-existent) IDs return 404 so we don't leak existence.
+    if payload.patient_id is not None:
+        patient = db.get(Patient, payload.patient_id)
+        if patient is None or patient.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Patient not found")
+
     s = ConsultSession(
         user_id=user.id,
+        patient_id=payload.patient_id,
         patient_label=payload.patient_label,
         chief_complaint=payload.chief_complaint,
     )
@@ -293,10 +312,55 @@ def update_soap(
 
 
 @router.patch("/{session_id}/icd/{icd_id}", response_model=SessionDetail)
-def set_icd_accepted(
+def update_icd(
     session_id: int,
     icd_id: int,
-    payload: IcdAcceptedUpdate,
+    payload: IcdUpdate,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Partial update of an ICD suggestion.
+
+    Any combination of `code`, `description`, `accepted` may be supplied.
+    When `code` changes, we re-validate it against the local CMS catalog:
+    is_validated flips accordingly, and if the new code is in the catalog
+    AND the client didn't override description, we adopt the authoritative
+    short_description.
+    """
+    s = _get_owned_session(session_id, user, db)
+    icd = db.get(IcdSuggestion, icd_id)
+    if icd is None or icd.session_id != s.id:
+        raise HTTPException(status_code=404, detail="ICD suggestion not found")
+
+    if payload.code is not None:
+        new_code = payload.code.strip().upper()
+        if not new_code:
+            raise HTTPException(status_code=400, detail="ICD code cannot be empty")
+        icd.code = new_code
+        match = (
+            db.query(IcdCatalog)
+            .filter(func.upper(IcdCatalog.code) == new_code)
+            .first()
+        )
+        icd.is_validated = match is not None
+        if match is not None and payload.description is None:
+            icd.description = match.short_description
+
+    if payload.description is not None:
+        icd.description = payload.description.strip()
+
+    if payload.accepted is not None:
+        icd.accepted_by_user = payload.accepted
+
+    db.commit()
+    db.refresh(s)
+    return _serialize_session_detail(s)
+
+
+@router.delete("/{session_id}/icd/{icd_id}", response_model=SessionDetail)
+def delete_icd(
+    session_id: int,
+    icd_id: int,
     db: DbSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -304,7 +368,21 @@ def set_icd_accepted(
     icd = db.get(IcdSuggestion, icd_id)
     if icd is None or icd.session_id != s.id:
         raise HTTPException(status_code=404, detail="ICD suggestion not found")
-    icd.accepted_by_user = payload.accepted
+    db.delete(icd)
+    db.commit()
+    db.refresh(s)
+    return _serialize_session_detail(s)
+
+
+@router.patch("/{session_id}/summary", response_model=SessionDetail)
+def update_summary(
+    session_id: int,
+    payload: SummaryUpdate,
+    db: DbSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    s = _get_owned_session(session_id, user, db)
+    s.visit_summary = payload.summary
     db.commit()
     db.refresh(s)
     return _serialize_session_detail(s)

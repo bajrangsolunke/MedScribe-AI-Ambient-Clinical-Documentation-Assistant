@@ -29,7 +29,13 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
   }
 
   return (
-    <div className="flex justify-center">
+    // The GoogleLogin button is an iframe whose interior pixels are owned
+    // by Google for brand-compliance. We can pick its variant and pixel
+    // width, but CSS overrides on the iframe are unreliable. So we just
+    // pick a pixel width that matches the AuthShell card's inner content
+    // width (max-w-md card = 448px minus sm:p-8 padding 64px = 384px), and
+    // centre it. The result lines up flush with the email/password inputs.
+    <div className="flex w-full justify-center [&_iframe]:!rounded-md">
       <GoogleLogin
         onSuccess={async (cred) => {
           if (!cred.credential) {
@@ -45,10 +51,11 @@ export function GoogleSignInButton({ onError, onSuccess }: Props) {
         }}
         onError={() => onError("Google sign-in was cancelled or failed")}
         useOneTap={false}
-        theme="outline"
+        theme="filled_black"
         size="large"
         text="continue_with"
         shape="rectangular"
+        width="384"
       />
     </div>
   );

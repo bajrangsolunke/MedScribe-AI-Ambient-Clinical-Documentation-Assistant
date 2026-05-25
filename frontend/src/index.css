@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode (Tailwind v4 syntax). The `dark:`
+   prefix applies whenever an ancestor (or itself) has the `.dark` class. */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand: #1f2937;
   --color-brand-accent: #4a90e2;
@@ -20,4 +24,13 @@ body {
     sans-serif;
   background: #f8fafc;
   color: #0f172a;
+  /* Smooth the colour change when toggling theme. */
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+html.dark body {
+  background: #020617; /* slate-950 */
+  color: #f1f5f9; /* slate-100 */
 }

@@ -3,7 +3,7 @@
 > Ambient AI clinical documentation — record a patient visit, watch the transcript build live in the browser, get a SOAP note plus catalog-validated ICD-10 codes plus a patient summary in seconds, edit it, export to PDF.
 
 [![Built with React + FastAPI + Groq](https://img.shields.io/badge/stack-React%20%C2%B7%20FastAPI%20%C2%B7%20Groq-0ea5e9?style=flat-square)](#tech-stack)
-[![Backend tests](https://img.shields.io/badge/backend%20tests-36%20passing-10b981?style=flat-square)](#tests)
+[![Backend tests](https://img.shields.io/badge/backend%20tests-53%20passing-10b981?style=flat-square)](#tests)
 [![Status](https://img.shields.io/badge/status-portfolio%20prototype-f59e0b?style=flat-square)](#whats-out-of-scope)
 
 ## Demo
@@ -33,9 +33,11 @@ Transcript appears in the browser in near real time (~4s latency per chunk) via 
 - 🎙 **Live audio waveform** during recording, driven by the real mic stream (Web Audio API · AnalyserNode)
 - 🧠 **Catalog-validated ICD codes** — every code the LLM suggests is looked up in the official CMS ICD-10-CM catalog; hallucinated codes are **kept and flagged** so the trust story is visible
 - 📊 **AI confidence meters** on each ICD suggestion (high / medium / low colour-graded)
+- 🩺 **Patient management** — group visits per patient, pick from existing or create on-the-fly, follow-up flow with full visit history
+- ✏️ **Editable everything** — doctor can edit SOAP fields, edit ICD code + description (with live catalog re-validation), accept/reject/delete codes, and edit the visit summary
 - 🔐 **Google OAuth** sign-in alongside JWT email/password, with account-linking on email match
 - 📈 **Production-feel dashboard** — stats, time-grouped sessions, search, status filter chips, delete / retry-finalize actions
-- 🧪 **36 backend tests**, all mocking Groq — CI never hits the real API
+- 🧪 **53 backend tests**, all mocking Groq — CI never hits the real API
 - 📄 **PDF export** via ReportLab with custom clinical template
 - 💾 **Audio deleted** immediately after transcription — privacy-friendly default
 
@@ -44,17 +46,20 @@ Transcript appears in the browser in near real time (~4s latency per chunk) via 
 ```
 BROWSER (React 19 · TypeScript · Vite · Tailwind v4 · shadcn-style UI)
   Login / Register (JWT + Google OAuth)
+  Top nav: Sessions · Patients
   Recorder (MediaRecorder, webm/opus, stop-restart chunk loop)
   Live waveform (AnalyserNode)
-  Workspace: Live Transcript | SOAP + ICD review + Summary
-  Dashboard: stats, search, time-grouped sessions, row actions
+  Patients: list, detail, picker · PatientDetail: visit history
+  Workspace: Live Transcript | SOAP + ICD review + Summary (all editable)
+  Dashboard: stats, search, time-grouped sessions, patient chips, row actions
         |
         | HTTPS + JWT, POST /audio-chunk, SSE /stream
         v
 BACKEND (FastAPI, async, BackgroundTasks, sse-starlette)
   Auth router       — /register · /login · /me · /google (OAuth ID-token verify)
+  Patients router   — list · create · get · update · delete (409 if has visits)
   Sessions router   — CRUD · /audio-chunk (live) · /finalize · /stream SSE
-                      /retry-finalize · DELETE
+                      /retry-finalize · DELETE · ICD edit/delete · summary edit
   Export router     — /export.pdf
   ChunkTranscriber  — transcribes each chunk synchronously, emits SSE fragments
   FinalizePipeline  — orchestrates SOAP → ICD candidates → validate → summary
@@ -64,7 +69,7 @@ BACKEND (FastAPI, async, BackgroundTasks, sse-starlette)
   AI SERVICES           LOCAL DATA       CATALOG + EXPORT
   Groq Whisper          SQLite via       ICD-10-CM catalog
   Groq Llama 3.3 70B    SQLAlchemy 2     (seeded from CMS TSV)
-  google-auth (OAuth)   6 tables         ReportLab PDF templates
+  google-auth (OAuth)   7 tables         ReportLab PDF templates
 ```
 
 ## Tech stack
@@ -124,28 +129,31 @@ Without the client ID, the Google button is hidden and email/password works alon
 ```
 backend/
   app/
-    api/             FastAPI routers (auth, sessions, export)
+    api/             FastAPI routers (auth, patients, sessions, export)
     services/        auth_service, chunk_transcriber, finalize_pipeline,
                      icd_validator, pdf_service, event_bus, google_oauth
     ai/              groq_client, stt (Whisper), llm (chat + JSON mode + retry)
     prompts/         SOAP / ICD / summary prompt templates
-    models/          SQLAlchemy ORM — 6 tables (users, sessions, transcripts,
-                     soap_notes, icd_suggestions, icd_catalog)
+    models/          SQLAlchemy ORM — 7 tables (users, patients, sessions,
+                     transcripts, soap_notes, icd_suggestions, icd_catalog)
     schemas/         Pydantic request/response models
     catalog/         ICD-10 seeder + vendored 51-code sample TSV
   alembic/           migrations
-  tests/             36 tests, all mocking Groq
+  tests/             53 tests, all mocking Groq
 
 frontend/
   src/
-    pages/           Login, Register, Dashboard, Workspace, SessionDetail
-    components/      AppShell, PatientHeader, PipelineStrip, TranscriptPanel,
-                     SoapPanel, IcdSuggestionsList, SummaryCard, Waveform,
-                     GoogleSignInButton, ProtectedRoute, ui/*
+    pages/           Login, Register, Dashboard, Workspace, SessionDetail,
+                     Patients, PatientDetail
+    components/      AppShell, PatientHeader, PatientPicker, PipelineStrip,
+                     TranscriptPanel, SoapPanel, IcdSuggestionsList,
+                     SummaryCard, Waveform, GoogleSignInButton,
+                     ProtectedRoute, ui/*
     hooks/           useAuth, useRecorder, useStreamingSession
     services/        api (typed fetch wrapper)
     store/           auth (Zustand + localStorage)
-    lib/             sessions (time grouping, formatting, confidence helpers)
+    lib/             sessions (time grouping, formatting, confidence helpers),
+                     patients (age from DOB)
   public/            favicon.svg (custom ECG waveform brand mark)
 
 docs/
@@ -171,7 +179,7 @@ cd backend
 .venv/bin/pytest -v
 ```
 
-36 tests across `test_auth.py` (incl. Google OAuth), `test_icd_validator.py`, `test_chunk_transcriber.py`, `test_finalize_pipeline.py`, `test_sessions_api.py`, `test_export.py`. All Groq and Google calls are mocked via `conftest.py` fixtures — tests never hit any external API.
+53 tests across `test_auth.py` (incl. Google OAuth), `test_patients_api.py`, `test_icd_validator.py`, `test_chunk_transcriber.py`, `test_finalize_pipeline.py`, `test_sessions_api.py`, `test_export.py`. All Groq and Google calls are mocked via `conftest.py` fixtures — tests never hit any external API.
 
 ## Roadmap
 
@@ -179,8 +187,9 @@ cd backend
 |---|-------------|--------|--------------|
 | 1 | **Core Scribe** | ✅ Done | Record → SOAP + ICD + summary → PDF |
 | 2 | **Live Streaming** | ✅ Done | Chunked Whisper, live transcript as the doctor talks |
-| + | Dashboard polish | ✅ Done | Stats cards, search, time grouping, row actions, custom favicon, OAuth |
-| 3 | **Clinical Intelligence** | 📋 Spec'd | Speaker diarization, entity extraction, risk flagging, AI follow-up questions |
+| 3 | **Patient Management** | ✅ Done | Patients table, follow-up flow, pick existing or create on-the-fly, visit history |
+| + | UX polish | ✅ Done | Dashboard stats, search, time grouping, row actions, custom favicon, OAuth, editable SOAP / ICD / summary |
+| 4 | **Clinical Intelligence** | 📋 Spec'd | Speaker diarization, entity extraction, risk flagging, AI follow-up questions |
 
 ## What's out of scope
 
@@ -197,6 +206,7 @@ Every sub-project went through **brainstorm → spec → plan → ship**. The sp
 
 - Sub-project #1 — [spec](docs/superpowers/specs/2026-05-20-medscribe-core-design.md) · [plan](docs/superpowers/plans/2026-05-20-medscribe-core-plan.md)
 - Sub-project #2 — [spec](docs/superpowers/specs/2026-05-21-medscribe-streaming-design.md) · [plan](docs/superpowers/plans/2026-05-21-medscribe-streaming-plan.md)
+- Sub-project #3 — [spec](docs/superpowers/specs/2026-05-21-medscribe-patients-design.md) · [plan](docs/superpowers/plans/2026-05-21-medscribe-patients-plan.md)
 
 ## License
 

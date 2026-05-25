@@ -19,3 +19,6 @@ class User(Base):
     sessions: Mapped[list["ConsultSession"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
+    patients: Mapped[list["Patient"]] = relationship(  # noqa: F821
+        back_populates="user", cascade="all, delete-orphan"
+    )

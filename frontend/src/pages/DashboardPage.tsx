@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { User as UserIcon } from "lucide-react";
 
+import { toast } from "sonner";
+
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { Pagination } from "@/components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,13 +31,14 @@ import { cn } from "@/lib/utils";
 import {
   avatarColor,
   computeStats,
+  dailyVisitCounts,
   formatDuration,
   formatTranscriptLen,
-  groupByTime,
   patientInitials,
   relativeTime,
   statusCanRetry,
 } from "@/lib/sessions";
+import { Sparkline } from "@/components/Sparkline";
 import { api } from "@/services/api";
 import type { SessionStatus, SessionSummary } from "@/types";
 
@@ -67,11 +73,15 @@ function statusBadge(status: SessionStatus) {
   );
 }
 
+const DEFAULT_PAGE_SIZE = 10;
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const sessionsQuery = useQuery({
     queryKey: ["sessions"],
@@ -82,13 +92,27 @@ export function DashboardPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => api.sessions.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast.success("Session deleted");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not delete session");
+    },
   });
 
   const retryMutation = useMutation({
     mutationFn: (id: number) => api.sessions.retryFinalize(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      toast.success("Re-running pipeline…");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Could not retry session");
+    },
   });
+
+  const [pendingDelete, setPendingDelete] = useState<SessionSummary | null>(null);
 
   const sessions: SessionSummary[] = useMemo(
     () => sessionsQuery.data ?? [],
@@ -110,12 +134,26 @@ export function DashboardPage() {
     return out;
   }, [sessions, filter, query]);
 
-  const grouped = useMemo(() => groupByTime(filtered), [filtered]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  if (safePage !== page) {
+    setPage(safePage);
+  }
+
+  const pageItems = useMemo(
+    () => filtered.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [filtered, safePage, pageSize],
+  );
 
   function handleDelete(s: SessionSummary) {
-    if (window.confirm(`Delete session "${s.patient_label}"? This cannot be undone.`)) {
-      deleteMutation.mutate(s.id);
-    }
+    setPendingDelete(s);
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    deleteMutation.mutate(pendingDelete.id, {
+      onSettled: () => setPendingDelete(null),
+    });
   }
 
   function handleRetry(s: SessionSummary) {
@@ -127,8 +165,8 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Your clinical sessions, transcripts, and notes.
           </p>
         </div>
@@ -153,6 +191,13 @@ export function DashboardPage() {
           value={stats.thisWeek}
           icon={<Activity className="h-5 w-5 text-sky-600" />}
           accent="bg-sky-50"
+          chart={
+            <Sparkline
+              values={dailyVisitCounts(sessions, 14)}
+              className="h-7 w-full"
+              stroke="#0ea5e9"
+            />
+          }
         />
         <StatCard
           label="Completion rate"
@@ -196,8 +241,8 @@ export function DashboardPage() {
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                     filter === f.key
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700",
                   )}
                 >
                   {f.label}
@@ -210,44 +255,52 @@ export function DashboardPage() {
           {sessionsQuery.isLoading ? (
             <LoadingSkeleton />
           ) : sessionsQuery.error ? (
-            <p className="px-2 py-6 text-sm text-red-600">Could not load sessions.</p>
+            <p className="px-2 py-6 text-sm text-red-600 dark:text-red-400">Could not load sessions.</p>
           ) : sessions.length === 0 ? (
             <EmptyState onNew={() => navigate("/sessions/new")} />
           ) : filtered.length === 0 ? (
-            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
               No sessions match your search or filter.
             </div>
           ) : (
-            <div className="space-y-5">
-              {grouped.map((group) => (
-                <div key={group.bucket}>
-                  <div className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {group.bucket}
-                    <span className="text-slate-300">·</span>
-                    <span className="font-normal lowercase tracking-normal text-slate-400">
-                      {group.sessions.length} session{group.sessions.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-                    <ul className="divide-y divide-slate-100">
-                      {group.sessions.map((s) => (
-                        <SessionRow
-                          key={s.id}
-                          session={s}
-                          onOpen={() => navigate(`/sessions/${s.id}`)}
-                          onDelete={() => handleDelete(s)}
-                          onRetry={() => handleRetry(s)}
-                          isDeleting={deleteMutation.variables === s.id && deleteMutation.isPending}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                {pageItems.map((s) => (
+                  <SessionRow
+                    key={s.id}
+                    session={s}
+                    onOpen={() => navigate(`/sessions/${s.id}`)}
+                    onDelete={() => handleDelete(s)}
+                    onRetry={() => handleRetry(s)}
+                    isDeleting={deleteMutation.variables === s.id && deleteMutation.isPending}
+                  />
+                ))}
+              </ul>
+              <Pagination
+                total={filtered.length}
+                page={safePage}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setPage(1);
+                }}
+              />
             </div>
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={pendingDelete !== null}
+        title={`Delete session "${pendingDelete?.patient_label ?? ""}"?`}
+        description="This permanently removes the recording, SOAP note, and ICD suggestions. This cannot be undone."
+        confirmLabel="Delete session"
+        variant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
@@ -258,21 +311,23 @@ interface StatCardProps {
   sub?: string;
   icon: React.ReactNode;
   accent: string;
+  chart?: React.ReactNode;
 }
 
-function StatCard({ label, value, sub, icon, accent }: StatCardProps) {
+function StatCard({ label, value, sub, icon, accent, chart }: StatCardProps) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {label}
         </div>
-        <div className={cn("flex h-9 w-9 items-center justify-center rounded-md", accent)}>
+        <div className={cn("flex h-9 w-9 items-center justify-center rounded-md dark:opacity-90", accent)}>
           {icon}
         </div>
       </div>
-      <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
-      {sub && <div className="text-xs text-slate-400">{sub}</div>}
+      <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">{value}</div>
+      {sub && <div className="text-xs text-slate-400 dark:text-slate-500">{sub}</div>}
+      {chart && <div className="-mb-1 mt-2">{chart}</div>}
     </div>
   );
 }
@@ -299,7 +354,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
         }
       }}
       className={cn(
-        "group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none",
+        "group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800",
         isDeleting && "opacity-50",
       )}
     >
@@ -313,7 +368,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
         {patientInitials(session.patient_label)}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 truncate text-sm font-medium text-slate-900">
+        <div className="flex items-center gap-2 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
           {session.patient_label}
           {session.status === "recording" && (
             <span
@@ -322,8 +377,25 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
             />
           )}
         </div>
-        <div className="truncate text-xs text-slate-500">
-          {session.chief_complaint || "No chief complaint"}
+        <div className="flex items-center gap-2 truncate text-xs text-slate-500 dark:text-slate-400">
+          <span className="truncate">
+            {session.chief_complaint || "No chief complaint"}
+          </span>
+          {session.patient_id ? (
+            <Link
+              to={`/patients/${session.patient_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-0.5 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 hover:bg-sky-100"
+              title="Open patient"
+            >
+              <UserIcon className="h-3 w-3" />
+              {session.patient_label}
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+              Walk-in
+            </span>
+          )}
         </div>
         {meta.length > 0 && (
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
@@ -338,7 +410,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
       </div>
       <div className="hidden md:block">{statusBadge(session.status)}</div>
       <div
-        className="hidden text-right text-xs text-slate-500 sm:block"
+        className="hidden text-right text-xs text-slate-500 dark:text-slate-400 sm:block"
         title={new Date(session.started_at).toLocaleString()}
       >
         {relativeTime(session.started_at)}
