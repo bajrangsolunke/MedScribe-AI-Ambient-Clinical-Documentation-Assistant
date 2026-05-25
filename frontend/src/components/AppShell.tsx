@@ -1,8 +1,9 @@
-import { AlertTriangle, LogOut, Search } from "lucide-react";
+import { AlertTriangle, LogOut, Moon, Search, Sun } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { avatarColor, patientInitials } from "@/lib/sessions";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ function BrandMark({ className }: { className?: string }) {
 
 export function AppShell({ children }: Props) {
   const { user, logout } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -114,6 +116,15 @@ export function AppShell({ children }: Props) {
                   ⌘K
                 </kbd>
               </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label="Toggle theme"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -143,17 +154,17 @@ export function AppShell({ children }: Props) {
                   />
                   <div
                     role="menu"
-                    className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-lg"
+                    className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                   >
-                    <div className="border-b border-slate-100 px-4 py-3">
+                    <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
                       <div className="text-sm font-medium">{emailToName(user.email)}</div>
-                      <div className="truncate text-xs text-slate-500">{user.email}</div>
+                      <div className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</div>
                     </div>
                     <button
                       type="button"
                       role="menuitem"
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout
@@ -166,7 +177,7 @@ export function AppShell({ children }: Props) {
           )}
         </div>
       </header>
-      <div className="flex items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs font-medium text-amber-800">
+      <div className="flex items-center justify-center gap-2 border-b border-amber-200 bg-amber-50 px-6 py-2 text-center text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
         <AlertTriangle className="h-3.5 w-3.5" />
         <span>Demo environment — do not enter real patient information (PHI).</span>
       </div>

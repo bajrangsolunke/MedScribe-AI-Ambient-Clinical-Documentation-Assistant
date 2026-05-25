@@ -35,27 +35,27 @@ export function Pagination({
   const visible = pageWindow(current, totalPages, 5);
 
   return (
-    <div className="flex flex-col items-start gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-xs text-slate-500">
+    <div className="flex flex-col items-start gap-3 border-t border-slate-100 px-3 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-xs text-slate-500 dark:text-slate-400">
         {total === 0 ? (
           "No results"
         ) : (
           <>
-            Showing <span className="font-medium text-slate-700">{start}</span>–
-            <span className="font-medium text-slate-700">{end}</span> of{" "}
-            <span className="font-medium text-slate-700">{total}</span>
+            Showing <span className="font-medium text-slate-700 dark:text-slate-300">{start}</span>–
+            <span className="font-medium text-slate-700 dark:text-slate-300">{end}</span> of{" "}
+            <span className="font-medium text-slate-700 dark:text-slate-300">{total}</span>
           </>
         )}
       </div>
 
       <div className="flex items-center gap-3">
         {onPageSizeChange && (
-          <label className="flex items-center gap-2 text-xs text-slate-500">
+          <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span>Rows</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded border border-slate-200 bg-white px-2 py-1 text-xs focus:border-slate-400 focus:outline-none"
+              className="rounded border border-slate-200 bg-white px-2 py-1 text-xs focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -77,7 +77,7 @@ export function Pagination({
 
           {visible.map((item, idx) =>
             item === "ellipsis" ? (
-              <span key={`e-${idx}`} className="px-2 text-xs text-slate-400">
+              <span key={`e-${idx}`} className="px-2 text-xs text-slate-400 dark:text-slate-500">
                 …
               </span>
             ) : (
@@ -116,8 +116,8 @@ function PaginationButton({ active, className, children, ...rest }: BtnProps) {
       className={cn(
         "inline-flex h-7 min-w-[28px] items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors",
         active
-          ? "border-slate-900 bg-slate-900 text-white"
-          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+          ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
+          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
         "disabled:cursor-not-allowed disabled:opacity-40",
         className,
       )}

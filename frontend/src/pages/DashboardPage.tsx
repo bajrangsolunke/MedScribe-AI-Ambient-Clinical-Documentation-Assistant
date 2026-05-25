@@ -165,8 +165,8 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Dashboard</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Your clinical sessions, transcripts, and notes.
           </p>
         </div>
@@ -241,8 +241,8 @@ export function DashboardPage() {
                   className={cn(
                     "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                     filter === f.key
-                      ? "bg-slate-900 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                      ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700",
                   )}
                 >
                   {f.label}
@@ -255,16 +255,16 @@ export function DashboardPage() {
           {sessionsQuery.isLoading ? (
             <LoadingSkeleton />
           ) : sessionsQuery.error ? (
-            <p className="px-2 py-6 text-sm text-red-600">Could not load sessions.</p>
+            <p className="px-2 py-6 text-sm text-red-600 dark:text-red-400">Could not load sessions.</p>
           ) : sessions.length === 0 ? (
             <EmptyState onNew={() => navigate("/sessions/new")} />
           ) : filtered.length === 0 ? (
-            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
               No sessions match your search or filter.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-              <ul className="divide-y divide-slate-100">
+            <div className="overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                 {pageItems.map((s) => (
                   <SessionRow
                     key={s.id}
@@ -316,17 +316,17 @@ interface StatCardProps {
 
 function StatCard({ label, value, sub, icon, accent, chart }: StatCardProps) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between">
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {label}
         </div>
-        <div className={cn("flex h-9 w-9 items-center justify-center rounded-md", accent)}>
+        <div className={cn("flex h-9 w-9 items-center justify-center rounded-md dark:opacity-90", accent)}>
           {icon}
         </div>
       </div>
-      <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
-      {sub && <div className="text-xs text-slate-400">{sub}</div>}
+      <div className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">{value}</div>
+      {sub && <div className="text-xs text-slate-400 dark:text-slate-500">{sub}</div>}
       {chart && <div className="-mb-1 mt-2">{chart}</div>}
     </div>
   );
@@ -354,7 +354,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
         }
       }}
       className={cn(
-        "group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none",
+        "group flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800",
         isDeleting && "opacity-50",
       )}
     >
@@ -368,7 +368,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
         {patientInitials(session.patient_label)}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 truncate text-sm font-medium text-slate-900">
+        <div className="flex items-center gap-2 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
           {session.patient_label}
           {session.status === "recording" && (
             <span
@@ -377,7 +377,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
             />
           )}
         </div>
-        <div className="flex items-center gap-2 truncate text-xs text-slate-500">
+        <div className="flex items-center gap-2 truncate text-xs text-slate-500 dark:text-slate-400">
           <span className="truncate">
             {session.chief_complaint || "No chief complaint"}
           </span>
@@ -410,7 +410,7 @@ function SessionRow({ session, onOpen, onDelete, onRetry, isDeleting }: SessionR
       </div>
       <div className="hidden md:block">{statusBadge(session.status)}</div>
       <div
-        className="hidden text-right text-xs text-slate-500 sm:block"
+        className="hidden text-right text-xs text-slate-500 dark:text-slate-400 sm:block"
         title={new Date(session.started_at).toLocaleString()}
       >
         {relativeTime(session.started_at)}

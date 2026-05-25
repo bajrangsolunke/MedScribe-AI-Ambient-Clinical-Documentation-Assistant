@@ -127,8 +127,8 @@ export function PatientsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Patients</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Patients</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Your patient list. Click a patient to see their visit history or
             start a follow-up.
           </p>
@@ -170,7 +170,7 @@ export function PatientsPage() {
                 <textarea
                   id="new-notes"
                   rows={2}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   placeholder="e.g., allergic to penicillin"
@@ -212,17 +212,17 @@ export function PatientsPage() {
           )}
 
           {patientsQuery.isLoading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
           ) : patients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50/40 p-12 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50/40 p-12 text-center dark:border-slate-700 dark:bg-slate-900/40">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-100 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400">
                 <Stethoscope className="h-7 w-7" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-slate-900">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   No patients yet
                 </h3>
-                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
                   Create your first patient to start grouping visits. Each new
                   recording can be linked so follow-ups stay together.
                 </p>
@@ -233,14 +233,14 @@ export function PatientsPage() {
               </Button>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+            <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
               No patients match your search.
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-md border border-slate-200">
+              <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/60 dark:text-slate-400">
                     <tr>
                       <th className="px-3 py-2 font-medium">Patient</th>
                       <th className="w-16 px-3 py-2 font-medium">Age</th>
@@ -250,7 +250,7 @@ export function PatientsPage() {
                       <th className="w-28 px-3 py-2 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {pageItems.map((p) => (
                       <PatientRow
                         key={p.id}
@@ -319,7 +319,7 @@ function PatientRow({ patient, onOpen, onEdit, onDelete, isDeleting }: PatientRo
         }
       }}
       className={cn(
-        "h-11 cursor-pointer transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none",
+        "h-11 cursor-pointer transition-colors hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800",
         isDeleting && "opacity-50",
       )}
     >
@@ -334,12 +334,12 @@ function PatientRow({ patient, onOpen, onEdit, onDelete, isDeleting }: PatientRo
           >
             {patientInitials(patient.full_label)}
           </span>
-          <span className="truncate font-medium text-slate-900">{patient.full_label}</span>
+          <span className="truncate font-medium text-slate-900 dark:text-slate-100">{patient.full_label}</span>
         </div>
       </td>
-      <td className="px-3 py-1.5 text-slate-600">{age !== null ? age : "—"}</td>
-      <td className="px-3 py-1.5 text-slate-600">{patient.visit_count}</td>
-      <td className="px-3 py-1.5 text-slate-600">
+      <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{age !== null ? age : "—"}</td>
+      <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">{patient.visit_count}</td>
+      <td className="px-3 py-1.5 text-slate-600 dark:text-slate-300">
         {patient.last_visit_at ? (
           <span title={new Date(patient.last_visit_at).toLocaleString()}>
             {new Date(patient.last_visit_at).toLocaleDateString()}
@@ -348,15 +348,15 @@ function PatientRow({ patient, onOpen, onEdit, onDelete, isDeleting }: PatientRo
           <span className="text-slate-400">—</span>
         )}
       </td>
-      <td className="max-w-xs truncate px-3 py-1.5 text-slate-500">
-        {patient.notes || <span className="text-slate-300">—</span>}
+      <td className="max-w-xs truncate px-3 py-1.5 text-slate-500 dark:text-slate-400">
+        {patient.notes || <span className="text-slate-300 dark:text-slate-600">—</span>}
       </td>
       <td className="px-3 py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
         <div className="inline-flex items-center gap-1">
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             title="Edit patient"
             aria-label="Edit patient"
           >
@@ -365,7 +365,7 @@ function PatientRow({ patient, onOpen, onEdit, onDelete, isDeleting }: PatientRo
           <button
             type="button"
             onClick={onDelete}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-600"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-950/30 dark:hover:text-red-400"
             title="Delete patient"
             aria-label="Delete patient"
           >

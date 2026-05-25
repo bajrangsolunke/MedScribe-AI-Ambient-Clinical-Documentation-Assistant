@@ -85,20 +85,20 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+        className="w-full max-w-xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
         onClick={(e) => e.stopPropagation()}
       >
         <Command label="Command palette" shouldFilter className="flex flex-col">
-          <div className="flex items-center gap-2 border-b border-slate-100 px-4">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-4 dark:border-slate-800">
             <Search className="h-4 w-4 shrink-0 text-slate-400" />
             <Command.Input
               autoFocus
               value={query}
               onValueChange={setQuery}
               placeholder="Search patients, sessions, or jump to a page…"
-              className="h-12 flex-1 bg-transparent text-sm placeholder:text-slate-400 focus:outline-none"
+              className="h-12 flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
             />
-            <kbd className="hidden rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500 sm:inline">
+            <kbd className="hidden rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-mono text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:inline">
               ESC
             </kbd>
           </div>
@@ -202,23 +202,23 @@ export function CommandPalette() {
               </PaletteItem>
             </Command.Group>
           </Command.List>
-          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-500">
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1">
-                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">
+                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono dark:border-slate-700 dark:bg-slate-900">
                   ↑↓
                 </kbd>
                 navigate
               </span>
               <span className="inline-flex items-center gap-1">
-                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">
+                <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono dark:border-slate-700 dark:bg-slate-900">
                   ↵
                 </kbd>
                 select
               </span>
             </div>
             <span className="inline-flex items-center gap-1">
-              <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono">
+              <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono dark:border-slate-700 dark:bg-slate-900">
                 ⌘K
               </kbd>
               toggle
@@ -257,12 +257,12 @@ function PaletteItem({
       onSelect={onSelect}
       keywords={keywords}
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 transition-colors",
-        "data-[selected=true]:bg-slate-100",
-        "aria-selected:bg-slate-100",
-        highlight && "data-[selected=true]:bg-sky-50",
+        "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 transition-colors dark:text-slate-300",
+        "data-[selected=true]:bg-slate-100 dark:data-[selected=true]:bg-slate-800",
+        "aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800",
+        highlight && "data-[selected=true]:bg-sky-50 dark:data-[selected=true]:bg-sky-950/40",
         danger &&
-          "text-red-600 data-[selected=true]:bg-red-50 data-[selected=true]:text-red-700",
+          "text-red-600 data-[selected=true]:bg-red-50 data-[selected=true]:text-red-700 dark:text-red-400 dark:data-[selected=true]:bg-red-950/30 dark:data-[selected=true]:text-red-300",
       )}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center text-slate-500">

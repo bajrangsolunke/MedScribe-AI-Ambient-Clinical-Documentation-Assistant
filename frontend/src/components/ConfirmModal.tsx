@@ -58,23 +58,23 @@ export function ConfirmModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
+        className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
       >
         <div className="flex items-start gap-3">
           {variant === "danger" && (
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400">
               <AlertTriangle className="h-5 w-5" />
             </span>
           )}
           <div className="flex-1">
             <h2
               id="confirm-modal-title"
-              className="text-base font-semibold text-slate-900"
+              className="text-base font-semibold text-slate-900 dark:text-slate-100"
             >
               {title}
             </h2>
             {description && (
-              <div className="mt-1 text-sm text-slate-600">{description}</div>
+              <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">{description}</div>
             )}
           </div>
         </div>
