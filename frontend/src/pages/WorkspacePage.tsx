@@ -1,5 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Download } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle2,
+  Download,
+  Lightbulb,
+  Mic,
+  Sparkles,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -12,11 +20,14 @@ import { SummaryCard } from "@/components/SummaryCard";
 import { TranscriptPanel } from "@/components/TranscriptPanel";
 import { Waveform } from "@/components/Waveform";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRecorder } from "@/hooks/useRecorder";
 import { useStreamingSession } from "@/hooks/useStreamingSession";
+import { cn } from "@/lib/utils";
+import { avatarColor, patientInitials, relativeTime } from "@/lib/sessions";
+import { ageFromDob } from "@/lib/patients";
 import { api } from "@/services/api";
 import type { Patient, SoapPayload } from "@/types";
 
@@ -135,46 +146,96 @@ export function WorkspacePage() {
   }
 
   if (sessionId === null) {
+    const step = pickedPatient ? 2 : 1;
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>New session</CardTitle>
-            <CardDescription>
-              Pick the patient (or create a new one), add an optional chief
-              complaint, then start recording.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreateSession} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Patient</Label>
+      <div className="space-y-5">
+        {/* Header with back link + title + step indicator */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to dashboard
+            </button>
+            <h1 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              Start a new session
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Pick the patient, add an optional chief complaint, then record.
+            </p>
+          </div>
+          <Stepper step={step} />
+        </div>
+
+        <form onSubmit={handleCreateSession} className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          {/* Left column: pick patient + chief complaint */}
+          <div className="space-y-5 lg:col-span-2">
+            <Card>
+              <CardContent className="space-y-3 p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white dark:bg-slate-100 dark:text-slate-900">
+                    1
+                  </span>
+                  Patient
+                </div>
                 <PatientPicker
                   selected={pickedPatient}
                   onSelect={(p) => setPickedPatient(p)}
                   onCreate={handleCreatePatientInline}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cc">Chief complaint (optional)</Label>
-                <Input
-                  id="cc"
-                  value={chiefComplaint}
-                  onChange={(e) => setChiefComplaint(e.target.value)}
-                  placeholder="e.g., chest pain, 2 days"
-                />
-              </div>
-              <div className="flex justify-between gap-2">
-                <Button type="button" variant="ghost" onClick={() => navigate("/")}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={!pickedPatient}>
-                  Create session
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="space-y-3 p-5">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <span
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
+                      pickedPatient
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                        : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+                    )}
+                  >
+                    2
+                  </span>
+                  Visit details
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cc">Chief complaint (optional)</Label>
+                  <Input
+                    id="cc"
+                    value={chiefComplaint}
+                    onChange={(e) => setChiefComplaint(e.target.value)}
+                    placeholder="e.g., chest pain, 2 days"
+                    disabled={!pickedPatient}
+                  />
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    A one-line summary of why the patient is here today.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="button" variant="ghost" onClick={() => navigate("/")}>
+                Cancel
+              </Button>
+              <Button type="submit" size="lg" disabled={!pickedPatient} className="gap-2">
+                <Mic className="h-4 w-4" />
+                Start recording
+              </Button>
+            </div>
+          </div>
+
+          {/* Right column: contextual sidebar */}
+          <aside className="lg:col-span-1">
+            <ContextSidebar patient={pickedPatient} />
+          </aside>
+        </form>
       </div>
     );
   }
@@ -279,5 +340,149 @@ export function WorkspacePage() {
         </div>
       )}
     </div>
+  );
+}
+
+// --- New-session screen helpers -------------------------------------------
+
+function Stepper({ step }: { step: 1 | 2 }) {
+  const items: { n: 1 | 2; label: string }[] = [
+    { n: 1, label: "Patient" },
+    { n: 2, label: "Visit" },
+  ];
+  return (
+    <div className="flex items-center gap-2">
+      {items.map((it, i) => {
+        const isActive = it.n === step;
+        const isDone = it.n < step;
+        return (
+          <div key={it.n} className="flex items-center gap-2">
+            <span
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold transition-colors",
+                isDone &&
+                  "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+                isActive &&
+                  "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900",
+                !isDone &&
+                  !isActive &&
+                  "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+              )}
+            >
+              {isDone ? <CheckCircle2 className="h-3.5 w-3.5" /> : it.n}
+            </span>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                isActive
+                  ? "text-slate-900 dark:text-slate-100"
+                  : "text-slate-500 dark:text-slate-400",
+              )}
+            >
+              {it.label}
+            </span>
+            {i < items.length - 1 && (
+              <span className="h-px w-6 bg-slate-200 dark:bg-slate-700" />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ContextSidebar({ patient }: { patient: Patient | null }) {
+  if (patient) {
+    const age = ageFromDob(patient.date_of_birth);
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-5">
+          <div className="flex items-center gap-3">
+            <span
+              className={cn(
+                "flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold",
+                avatarColor(patient.full_label),
+              )}
+            >
+              {patientInitials(patient.full_label)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-base font-semibold text-slate-900 dark:text-slate-100">
+                {patient.full_label}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {age !== null && <>Age {age} · </>}
+                {patient.visit_count > 0
+                  ? `${patient.visit_count} prior visit${patient.visit_count === 1 ? "" : "s"}`
+                  : "No prior visits"}
+              </div>
+            </div>
+          </div>
+
+          {patient.notes && (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Notes
+              </div>
+              <p className="whitespace-pre-wrap">{patient.notes}</p>
+            </div>
+          )}
+
+          {patient.last_visit_at && (
+            <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <Sparkles className="mt-0.5 h-3.5 w-3.5 text-sky-500" />
+              <p>
+                This will be visit{" "}
+                <strong className="text-slate-700 dark:text-slate-200">
+                  #{patient.visit_count + 1}
+                </strong>
+                . Last seen{" "}
+                <strong className="text-slate-700 dark:text-slate-200">
+                  {relativeTime(patient.last_visit_at)}
+                </strong>
+                .
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <Lightbulb className="h-4 w-4 text-amber-500" />
+          Tips for a good recording
+        </div>
+        <ul className="space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
+          <li className="flex gap-2">
+            <span className="mt-0.5 text-slate-300 dark:text-slate-600">•</span>
+            <span>Quiet room, mic ~30 cm from your mouth.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-0.5 text-slate-300 dark:text-slate-600">•</span>
+            <span>Speak naturally and pause briefly between sentences.</span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-0.5 text-slate-300 dark:text-slate-600">•</span>
+            <span>
+              The transcript appears <strong>every ~4 seconds</strong> while you talk.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="mt-0.5 text-slate-300 dark:text-slate-600">•</span>
+            <span>
+              Click <strong>Stop</strong> when finished. SOAP + ICD + summary land in ~10s.
+            </span>
+          </li>
+        </ul>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+          <strong>Demo only.</strong> Use a synthetic patient label and read from the
+          scripted scenarios — no real PHI.
+        </div>
+      </CardContent>
+    </Card>
   );
 }
