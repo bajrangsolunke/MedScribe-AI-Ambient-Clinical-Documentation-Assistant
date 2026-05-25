@@ -1,4 +1,4 @@
-import { AlertTriangle, LogOut } from "lucide-react";
+import { AlertTriangle, LogOut, Search } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
@@ -90,6 +90,30 @@ export function AppShell({ children }: Props) {
             )}
           </div>
           {user && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // Trigger the global ⌘K listener. Dispatching the keyboard
+                  // event keeps the source of truth in CommandPalette.
+                  document.dispatchEvent(
+                    new KeyboardEvent("keydown", {
+                      key: "k",
+                      metaKey: true,
+                      ctrlKey: true,
+                      bubbles: true,
+                    }),
+                  );
+                }}
+                className="hidden items-center gap-2 rounded-md border border-slate-800 bg-slate-800/40 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800 hover:text-white sm:inline-flex"
+                title="Open command palette (⌘K / Ctrl+K)"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span>Quick search…</span>
+                <kbd className="ml-2 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
+                  ⌘K
+                </kbd>
+              </button>
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -137,6 +161,7 @@ export function AppShell({ children }: Props) {
                   </div>
                 </>
               )}
+            </div>
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 
+import { CommandPalette } from "@/components/CommandPalette";
 import { AppRoutes } from "@/routes";
 
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ export default function App() {
       <MaybeGoogleProvider>
         <BrowserRouter>
           <AppRoutes />
+          <CommandPalette />
         </BrowserRouter>
       </MaybeGoogleProvider>
       <Toaster
