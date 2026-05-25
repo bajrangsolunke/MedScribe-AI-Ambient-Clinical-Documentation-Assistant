@@ -31,12 +31,14 @@ import { cn } from "@/lib/utils";
 import {
   avatarColor,
   computeStats,
+  dailyVisitCounts,
   formatDuration,
   formatTranscriptLen,
   patientInitials,
   relativeTime,
   statusCanRetry,
 } from "@/lib/sessions";
+import { Sparkline } from "@/components/Sparkline";
 import { api } from "@/services/api";
 import type { SessionStatus, SessionSummary } from "@/types";
 
@@ -189,6 +191,13 @@ export function DashboardPage() {
           value={stats.thisWeek}
           icon={<Activity className="h-5 w-5 text-sky-600" />}
           accent="bg-sky-50"
+          chart={
+            <Sparkline
+              values={dailyVisitCounts(sessions, 14)}
+              className="h-7 w-full"
+              stroke="#0ea5e9"
+            />
+          }
         />
         <StatCard
           label="Completion rate"
@@ -302,9 +311,10 @@ interface StatCardProps {
   sub?: string;
   icon: React.ReactNode;
   accent: string;
+  chart?: React.ReactNode;
 }
 
-function StatCard({ label, value, sub, icon, accent }: StatCardProps) {
+function StatCard({ label, value, sub, icon, accent, chart }: StatCardProps) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -317,6 +327,7 @@ function StatCard({ label, value, sub, icon, accent }: StatCardProps) {
       </div>
       <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
       {sub && <div className="text-xs text-slate-400">{sub}</div>}
+      {chart && <div className="-mb-1 mt-2">{chart}</div>}
     </div>
   );
 }
